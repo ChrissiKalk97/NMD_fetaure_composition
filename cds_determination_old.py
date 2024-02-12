@@ -37,6 +37,7 @@ def get_cds_genomic_coordinates(orf_sequences):
     """Calculates the genomic positions of the ORFs found in the ORF finder step and stores them in a bed
     object, the exons and partial exons constituting the ORF are listed"""
     bed_string = ""
+    start_positions = ""
     for orf in orf_sequences:
         name = orf.name + ":" + orf.id
         orf_start = int(orf.id.split(":")[2])
@@ -45,6 +46,7 @@ def get_cds_genomic_coordinates(orf_sequences):
         chromosome = re.match("chrom(.+)", transcript_info[0]).group(1)
         strand = re.match("strand(.+)", transcript_info[1]).group(1)
         length = 0
+        start_counter = 0
         if strand == "+":
             counter = 2
             while orf_end > 0:
@@ -54,6 +56,11 @@ def get_cds_genomic_coordinates(orf_sequences):
                 former_length = length
                 length += (exon_end - exon_start)+1#exon end and start are included
                 if orf_start < length: #this strictly smaller is needed here, otherwise the error occurs that the stop is smaller than the start
+                    if start_counter == 0:
+                            #note down the start position
+                            start_positions += chromosome + "\t" + str(exon_start + orf_start - former_length) + "\t" +\
+                            str(exon_start + orf_start - former_length + 2) + "\t" + name +"\t" + orf.annotations["score"] + "\t" + strand+ "\n"
+                            start_counter += 1
                     if exon_start + orf_end - former_length > exon_end:
                         bed_string += chromosome + "\t" + str(exon_start + orf_start - former_length) + "\t" +\
                             str(exon_end) + "\t" + name +"\t" + orf.annotations["score"] + "\t" + strand + "\n"
@@ -72,6 +79,10 @@ def get_cds_genomic_coordinates(orf_sequences):
                 former_length = length
                 length += (exon_end - exon_start)+1
                 if orf_start < length:
+                    if start_counter == 0:
+                        start_positions += chromosome + "\t" + str(exon_end - orf_start + former_length - 2) + "\t" + str(exon_end - orf_start + former_length) +\
+                            "\t" + name +"\t" + orf.annotations["score"] + "\t" + strand + "\n"
+                        start_counter += 1
                     if exon_end - orf_end + former_length < exon_start:
                         bed_string += chromosome + "\t" + str(exon_start) + "\t" + str(exon_end - orf_start + former_length) +\
                             "\t" + name +"\t" + orf.annotations["score"] + "\t" + strand + "\n"
@@ -84,9 +95,9 @@ def get_cds_genomic_coordinates(orf_sequences):
                 
     try:
         print("hurray!")
-        bedtool_object = pybedtools.BedTool(bed_string, from_string=True)
-        #print(bedtool_object)
-        return bedtool_object
+        genomic_coordinates = pybedtools.BedTool(bed_string, from_string=True)
+        start_positions = pybedtools.BedTool(start_positions, from_string=True)
+        return genomic_coordinates, start_positions
     except Exception as e:
         print(e)
         for line in bed_string.split("\n"):
