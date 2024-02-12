@@ -1,0 +1,11 @@
+*.pyc
+*.pyo
+*.fasta
+*.fa
+*.fai
+cache/
+.DS_Store
+*.docx
+*.csv
+*.tsv
+*.xlxs
