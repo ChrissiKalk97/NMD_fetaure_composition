@@ -94,9 +94,8 @@ def get_cds_genomic_coordinates(orf_sequences):
                 counter -= 1
                 
     try:
-        print("hurray!")
         genomic_coordinates = pybedtools.BedTool(bed_string, from_string=True)
-        start_positions = pybedtools.BedTool(start_positions, from_string=True)
+        #start_positions = pybedtools.BedTool(start_positions, from_string=True)
         return genomic_coordinates, start_positions
     except Exception as e:
         print(e)

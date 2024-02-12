@@ -1,11 +1,12 @@
 import sys
 
-
+import regex as re
 import pandas as pd
 from pygtftk.gtf_interface import GTF
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 #import pybedtools as pb
+
 
 from new_helper_functions import find_termination_codon, compose_transcript, get_transcript_string
 from cds_determination_old import get_fasta_tid, get_cds_genomic_coordinates
@@ -57,7 +58,7 @@ def main():
     if len(transcript_ids_wo_cds) > 0:
         print("known_tids_no_cds", len(transcript_ids_wo_cds))
         transcripts_no_cds = {k: transcript_gtftk_object[k] for k in transcript_gtftk_object.keys()\
-                               if k in transcript_ids_wo_cds[0:10000]}
+                               if k in transcript_ids_wo_cds[0:1000]}
         genome_file = "./Homo_sapiens.GRCh38.dna.primary_assembly_110_new.fa"
         sequences = get_fasta_tid(transcripts_no_cds, genome_file)
         ORFs = OrfFinder(sequences)
@@ -78,6 +79,10 @@ def main():
         .extract_data('gene_id,transcript_id,start,end,exon_number,feature,strand,chrom,score',
                        as_dict_of_merged_list=True)
         del ensembl_gtf
+
+        for start in start_positions.split("\n"):
+            print(start)
+            print(re.split(r"\t|:", start))
 
 
         for gene in gene_ids_ORF_transcripts[0:10]:
