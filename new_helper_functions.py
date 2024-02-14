@@ -35,6 +35,22 @@ def get_cds_end(cds : List[List[str]], strand : str)-> int:
                 stop_position_minus = three_prime
                 cds_end = three_prime
     return cds_end
+
+def get_cds_start(cds : List[List[str]], strand : str):
+    start_position_plus = float("inf")
+    start_position_minus = 0
+    for partial_cds in cds:
+        if strand == "+":
+            five_prime = int(partial_cds[1])
+            if start_position_plus < five_prime:
+                start_position_plus = five_prime
+                partial_cds[2] = str(int(partial_cds[1])+2)
+        else:
+            five_prime = int(partial_cds[2])
+            if start_position_minus > five_prime:
+                start_position_minus = five_prime
+                partial_cds[1] = str(int(partial_cds[2])-2)
+    return partial_cds
                 
  
 def find_termination_codon(transcript_as_list: List[str], cds: List[List[str]]) -> int:

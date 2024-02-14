@@ -8,9 +8,9 @@ from Bio.SeqRecord import SeqRecord
 #import pybedtools as pb
 
 
-from new_helper_functions import find_termination_codon, compose_transcript, get_transcript_string
-from cds_determination_old import get_fasta_tid, get_cds_genomic_coordinates
-from OrfFinder_py3_old import OrfFinder
+from new_helper_functions import find_termination_codon, compose_transcript,  get_cds_start
+from cds_determination import get_fasta_tid, get_cds_genomic_coordinates, get_pct_reference
+from OrfFinder_py3 import OrfFinder
 
 def main():
     #read in gtf files
@@ -58,36 +58,36 @@ def main():
     if len(transcript_ids_wo_cds) > 0:
         print("known_tids_no_cds", len(transcript_ids_wo_cds))
         transcripts_no_cds = {k: transcript_gtftk_object[k] for k in transcript_gtftk_object.keys()\
-                               if k in transcript_ids_wo_cds[0:1000]}
+                               if k in transcript_ids_wo_cds[0:10000]}
         genome_file = "./Homo_sapiens.GRCh38.dna.primary_assembly_110_new.fa"
         sequences = get_fasta_tid(transcripts_no_cds, genome_file)
         ORFs = OrfFinder(sequences)
         cds_bed_positions, start_positions = get_cds_genomic_coordinates(ORFs)
         
-        
         #extract gene ids of the transcripts that make ORFs
         gene_ids_ORF_transcripts = [orf.name for orf in ORFs]
         gene_ids_ORF_transcripts = list(set(gene_ids_ORF_transcripts))
-        #prepare string of gene ids to filter reference anno for gnees
-        gene_string = get_transcript_string(gene_ids_ORF_transcripts)
-        #load reference annotation
-        ensembl_gtf = GTF(sys.argv[2], check_ensembl_format=False)
-        #filter ensembl for gene_ids and protein coding transcripts
-        reference_genes = ensembl_gtf\
-        .select_by_key("gene_id", gene_string)\
-        .select_by_key('feature', "CDS,exon,stop_codon,start_codon")\
-        .extract_data('gene_id,transcript_id,start,end,exon_number,feature,strand,chrom,score',
-                       as_dict_of_merged_list=True)
-        del ensembl_gtf
+        
+        reference_genes = get_pct_reference(sys.argv[2], gene_ids_ORF_transcripts)
 
+        start_sites_by_gene = {}
         for start in start_positions.split("\n"):
-            print(start)
-            print(re.split(r"\t|:", start))
+            start_info = re.split(r"\t|:", start)
+            try:
+                if start_info[3] not in start_sites_by_gene.keys():
+                    start_sites_by_gene[start_info[3]] = [start_info]
+                else:
+                    start_sites_by_gene[start_info[3]].append(start_info)
+            except:
+                print(start)
+        #print(start_sites_by_gene)
+                
 
 
-        for gene in gene_ids_ORF_transcripts[0:10]:
+        for gene in gene_ids_ORF_transcripts:
             try:
                 gene_info = reference_genes[gene]
+                orfs_starts_for_gene = start_sites_by_gene[gene]
                 #build sublist for each feature of the transcript
                 gene_info = [gene_info[x:x+8] for x in range(0, len(gene_info), 8)]
                 tids = [gene[0] for gene in gene_info]
@@ -99,14 +99,27 @@ def main():
                 start_sites = []
                 for tid in tids:
                     gene_dict[tid] = [gene for gene in gene_info if gene[0] == tid]
+                    #print(gene_dict[tid])
                     start_sites += [sub_list for sub_list in gene_dict[tid] if "start_codon" in sub_list]
-                print(start_sites)
-                #extract cds features
-                #cds = [sub_list for sub_list in transcript_info if "CDS" in sub_list]
-                #stop
-                #start
+                    if not start_sites:
+                        cds += [sub_list for sub_list in gene_dict[tid] if "CDS" in sub_list]
+                        if cds:
+                            start_sites.append(get_cds_start(cds, cds[0][5]))
 
+                #print(orfs_starts_for_gene) 
+                if start_sites:
+                    starts = [start[1] for start in start_sites]
+                    orf_with_coinciding_start = [orf for orf in orfs_starts_for_gene if orf[1] in starts] 
+                    orf_wo_coinciding_start = [orf for orf in orfs_starts_for_gene if orf[1] not in starts]   
+                    print("with starts", orf_with_coinciding_start)
+                    print("no starts", orf_wo_coinciding_start)
+                    print("the starts", starts)
+                #no need to check the chromosome as we are on the same gene
+                #print(f"transcript annotated CDS/start sites for {gene}", start_sites)
+                #print(f"ORF starts for {gene}", orfs_starts_for_gene)
 
+                
+                
             except KeyError as e:
                 print(e, "gene", gene, "is not in the reference")
 
