@@ -54,9 +54,6 @@ def get_orfs(seq, id, gene, description, annotations, countOrfs, orf_records):
                                     ##### added Frame to ID #####
                                     header = ''.join([id, ":ORF-", str(countOrfs), ":", str(lst1[frame][currentStart]), ":", str(lst2[frame][currentStop]+2)])
                                     sequence = seq[lst1[frame][currentStart]:lst2[frame][currentStop]+3]
-                                    ####################################################################################################################
-                                    ###WHY +3? SHOULD IT NOT BE +2?#####################################################################################
-                                    ####################################################################################################################
                                     countOrfs = countOrfs + 1
                                     orf_records.append(SeqRecord(id= header, seq = sequence, name = gene, description = description, annotations = annotations))
                                 #remove all other start codons that are nested between the current start and stop
