@@ -69,9 +69,14 @@ def get_orfs(seq, id, gene, description, annotations, countOrfs, orf_records):
 
 def OrfFinder(transcript_SeqRecords):
     orf_records = []
+    f = open("transcripts_without_ORFs.txt", "w")
+    
     for transcript in transcript_SeqRecords:
             countOrfs=1#ORF numbers per transcript
             orf_records = get_orfs(transcript.seq.upper(), transcript.id, transcript.name, transcript.description, transcript.annotations, countOrfs, orf_records)
+            if countOrfs == 1:
+                f.write(f"Transcript {transcript.id} of gene {transcript.name} did not contain an ORF \n")
+    f.close()
     return(orf_records)
                 
         
