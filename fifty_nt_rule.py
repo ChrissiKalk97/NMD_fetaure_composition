@@ -5,7 +5,7 @@ import pandas as pd
 from pygtftk.gtf_interface import GTF
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
-#import pybedtools as pb
+
 
 
 from new_helper_functions import  get_cds_start
@@ -44,12 +44,6 @@ def main():
         determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, sys.argv[2], sys.argv[3])
 
 
-        #filter for protein coding transcripts with CDS, stop and start codon
-        #check whether there are several of the same gene for which the start codon coincides
-            #with the start of the ORF from the possible NMD transcript
-
-        #bedtools intersect: select the ORF with the highest coverage in case that there are several left
-        #how to deal with Ensmebl CDS annotation? Only take entries where they have a start and a stop annotated?
     print(len(NMD_features_df["50_nt"]), sum(NMD_features_df["50_nt"]))
     return  0
 

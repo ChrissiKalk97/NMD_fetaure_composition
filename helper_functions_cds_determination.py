@@ -145,10 +145,10 @@ def get_ORF_start_by_gene(start_positions):
             print(start)
     return start_sites_by_gene
     
-def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_sites_by_gene, cds_bed_positions):
+def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_sites_by_gene):
     tids_orf_no_coinciding_start = [] 
     transcripts_cds_determined = {}
-    bed_for_intersection  = None
+    transcripts_several_orfs = []
     for gene in gene_ids_ORF_transcripts:
         try:
             gene_info = reference_genes[gene]
@@ -166,8 +166,10 @@ def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_
                 start_sites += [sub_list for sub_list in gene_dict[tid] if 'start_codon' in sub_list]
                 if not start_sites:
                     cds = [sub_list for sub_list in gene_dict[tid] if 'CDS' in sub_list]
-                    if cds:
+                    try:
                         start_sites.append(get_cds_start(cds, cds[0][5]))
+                    except e:
+                        print("No start sites and no CDS found!", e)
 
             if start_sites:
                 starts = [start[1] for start in start_sites]
@@ -182,15 +184,10 @@ def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_
                         transcript_dict[transcript_id].append([orf])
                 for transcript, orfs in transcript_dict.items():
                     if len(orfs) > 1:
-                        #get entries for bedtools intersect
-                        bed_of_transcripts = cds_bed_positions.filter(lambda gene: transcript in gene.name).saveas()
-                        if bed_for_intersection is not None:
-                            bed_for_intersection = bed_for_intersection.cat(bed_of_transcripts, postmerge = False).saveas()
-                        else:
-                            bed_for_intersection = bed_of_transcripts
+                        transcripts_several_orfs.append(transcript)
                     else:
                         #write the single ORF to output
-                        transcripts_cds_determined[transcript] = orf
+                        transcripts_cds_determined[transcript] = orfs
 
 
                 tids_with_starts = list(set([start[4] for start in orf_with_coinciding_start]))
@@ -204,7 +201,12 @@ def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_
             #print(e, "gene", gene, "is not in the reference\
                   #or does not have protein coding transcripts")
         
-    print("nr of transcripts with no starts", len(tids_orf_no_coinciding_start))
-    return transcripts_cds_determined, bed_for_intersection
+    print("nr of transcripts with no starts", len(set(tids_orf_no_coinciding_start)))
+    return transcripts_cds_determined, transcripts_several_orfs
+
+def filter_bed_file(transcripts_several_orfs, bedfile):
+    bed_of_transcripts = bedfile.filter(lambda gene: any(map(gene.name.__contains__, transcripts_several_orfs)))
+    return bed_of_transcripts
+    
                     
 #there is the -s option for bedtools to enforce strandedness: overlaps are only reported if on the same strand
