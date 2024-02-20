@@ -1,4 +1,5 @@
 import sys
+import time
 
 import regex as re
 import pandas as pd
@@ -14,6 +15,7 @@ from cds_determination import determine_cds
 from OrfFinder_py3 import OrfFinder
 
 def main():
+    start_time = time.time()
     #read in gtf files
     #ensembl_gtf = GTF(sys.argv[2], check_ensembl_format=False)
     custom_gtf = GTF(sys.argv[1], check_ensembl_format=False)
@@ -38,6 +40,9 @@ def main():
     transcript_ids_wo_cds, NMD_features_df =\
     handle_cds_transcripts(transcript_gtftk_object, transcript_ids, NMD_features_df)
     
+
+    start_no_cds = time.time() - start_time
+    print("Time for start and checking no cds", start_no_cds)
     #get fasta of transcripts with known id
     if len(transcript_ids_wo_cds) > 0:
         print("known_tids_no_cds", len(transcript_ids_wo_cds))

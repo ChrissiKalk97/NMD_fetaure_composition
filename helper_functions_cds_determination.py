@@ -124,13 +124,14 @@ def get_pct_reference(ref_name, gene_ids_ORF_transcripts):
         
         #load reference annotation
         #filter ensembl for gene_ids and protein coding transcripts
-        reference_genes = GTF(ref_name, check_ensembl_format=False)\
+        reference_gtf = GTF(ref_name, check_ensembl_format=False)
+        reference_genes = reference_gtf\
         .select_by_key('gene_id', gene_string)\
         .select_by_key('transcript_biotype', 'protein_coding')\
         .select_by_key('feature', 'CDS,start_codon')\
         .extract_data('gene_id,transcript_id,start,end,exon_number,feature,strand,chrom,score',
                        as_dict_of_merged_list=True)
-        return reference_genes
+        return reference_genes, reference_gtf
 
 def get_ORF_start_by_gene(start_positions):
     start_sites_by_gene = {}
@@ -193,13 +194,9 @@ def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_
                 tids_with_starts = list(set([start[4] for start in orf_with_coinciding_start]))
                 tids_wo_starts = list(set([start[4] for start in orf_wo_coinciding_start]))
                 tids_orf_no_coinciding_start.extend([tid for tid in tids_wo_starts if tid not in tids_with_starts])
-            #print(f"transcript annotated CDS/start sites for {gene}", start_sites)
-            #print(f"ORF starts for {gene}", orfs_starts_for_gene)
             
         except KeyError as e:
             pass
-            #print(e, "gene", gene, "is not in the reference\
-                  #or does not have protein coding transcripts")
         
     print("nr of transcripts with no starts", len(set(tids_orf_no_coinciding_start)))
     return transcripts_cds_determined, transcripts_several_orfs
