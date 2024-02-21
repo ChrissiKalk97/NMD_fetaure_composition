@@ -16,14 +16,13 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, reference_file
     #"./Homo_sapiens.GRCh38.dna.primary_assembly_110_new.fa"
     start_time = time.time()
     sequences = get_fasta_tid(transcripts_no_cds, genome_file)
+    print("Number of transcripts for which Sequence was generated", len(set([rec.id for rec in sequences])))
     get_fasta = time.time() - start_time
     ORFs = OrfFinder(sequences)
     getORFs = time.time() - start_time - get_fasta 
     cds_bed_positions, start_positions = get_cds_genomic_coordinates(ORFs)
     genomic_time = time.time() - start_time - get_fasta - getORFs 
-    print("time needed for fasta", get_fasta)
-    print("time needed for ORFs", getORFs)
-    print("time needed for genomic", genomic_time)
+    
 
     #extract gene ids of the transcripts that make ORFs
     gene_ids_ORF_transcripts = [orf.name for orf in ORFs]
@@ -47,8 +46,7 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, reference_file
         coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_sites_by_gene)
     t_co_ss = time.time() - start_time - get_fasta - getORFs - genomic_time - prepare_reference
 
-    print("time needed for reference preparation", prepare_reference)
-    print("time needed for coinc start sites", t_co_ss)
+    
 
 
     transcripts_several_orfs_bed = filter_bed_file(transcripts_several_orfs, cds_bed_positions)
@@ -72,10 +70,14 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, reference_file
 
     summed_counts = summed_counts.groupby(["name", "name_tar"])['overlap'].sum()
     summed_counts = summed_counts.reset_index()
+    time_intersect_sum = time.time() - start_time - get_fasta - getORFs -\
+          genomic_time - prepare_reference - t_co_ss - t_filter_beds
+    
 
-    print(type(summed_counts["name"].str.split(":")))
-    print(summed_counts["name"].str.split(":"))
-    print(summed_counts["name"].str.split(":")[0])
+
+    #print(type(summed_counts["name"].str.split(":")))
+    #print(summed_counts["name"].str.split(":"))
+    #print(summed_counts["name"].str.split(":")[0])
     #extract transcript id from name and search target with largest overlap
     #the corresponding ORF will be the CDS for the transcript
 
@@ -84,5 +86,17 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, reference_file
     print("Nr transcripts with only one CDS", len(transcripts_cds_determined.keys()))
 
     pb.cleanup(remove_all=True)
+
+
+    print("time needed for fasta", get_fasta)
+    print("time needed for ORFs", getORFs)
+    print("time needed for genomic", genomic_time)
+    print("time needed for reference preparation", prepare_reference)
+    print("time needed for coinc start sites", t_co_ss)
+    print("Time needed to filter beds", t_filter_beds)
+    print("Time needed to intersect and sum counts", time_intersect_sum)
+
+
+    
 
     

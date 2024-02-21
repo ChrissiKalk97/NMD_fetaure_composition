@@ -45,7 +45,9 @@ def get_cds_genomic_coordinates(orf_sequences):
     constituting the ORF are listed"""
     bed_string = ""
     start_positions = ""
+    transcripts = []
     for orf in orf_sequences:
+        transcripts.append(orf.id.split(":")[0])
         name = orf.name + ":" + orf.id
         orf_start = int(orf.id.split(":")[2])
         orf_end = int(orf.id.split(":")[3])
@@ -105,6 +107,20 @@ def get_cds_genomic_coordinates(orf_sequences):
                 counter -= 1
                 
     try:
+        bed_string = bed_string[:-1]
+        start_positions = start_positions[:-1]
+        tids_start = []
+        tids_bed = []
+        for start in start_positions.split('\n'):
+            tids_start.append(re.split(r'\t|:', start)[4])
+        
+        for entry in bed_string.split('\n'):
+            tids_bed.append(re.split(r'\t|:', entry)[4])
+        
+        print("nr of transcripts that were in ORF file", len(set(transcripts)))
+        print("nr tids which are in bed", len(set(tids_bed)))
+        print("nr tids for which start noted", len(set(tids_start)))
+
         genomic_coordinates = pybedtools.BedTool(bed_string, from_string=True)
         #start_positions = pybedtools.BedTool(start_positions, from_string=True)
         return genomic_coordinates, start_positions
@@ -171,18 +187,25 @@ def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_
                         start_sites.append(get_cds_start(cds, cds[0][5]))
                     except e:
                         print("No start sites and no CDS found!", e)
+                        #seems like this never happens when focusing on protein_coding transcripts
 
             if start_sites:
                 starts = [start[1] for start in start_sites]
                 orf_with_coinciding_start = [orf for orf in orfs_starts_for_gene if orf[1] in starts] 
-                orf_wo_coinciding_start = [orf for orf in orfs_starts_for_gene if orf[1] not in starts]   
+                orf_wo_coinciding_start = [orf for orf in orfs_starts_for_gene if orf[1] not in starts]
+                tids_with_starts = list(set([start[4] for start in orf_with_coinciding_start])) 
+                #add orfs with tids that are not present in the orfs with coinc start sites 
+                orfs_to_consider =  orf_with_coinciding_start +\
+                      [orf for orf in orf_wo_coinciding_start if orf[4] not in tids_with_starts]
+                
                 transcript_dict = {}
-                for orf in orf_with_coinciding_start:
+                for orf in orfs_to_consider:
                     transcript_id = orf[4]
                     if transcript_id not in transcript_dict.keys():
                         transcript_dict[transcript_id] = [orf]
                     else: 
                         transcript_dict[transcript_id].append([orf])
+                
                 for transcript, orfs in transcript_dict.items():
                     if len(orfs) > 1:
                         transcripts_several_orfs.append(transcript)
@@ -190,8 +213,7 @@ def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_
                         #write the single ORF to output
                         transcripts_cds_determined[transcript] = orfs
 
-
-                tids_with_starts = list(set([start[4] for start in orf_with_coinciding_start]))
+                #calculation of tids without coinciding start sites: not needed just info
                 tids_wo_starts = list(set([start[4] for start in orf_wo_coinciding_start]))
                 tids_orf_no_coinciding_start.extend([tid for tid in tids_wo_starts if tid not in tids_with_starts])
             
@@ -199,10 +221,11 @@ def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_
             pass
         
     print("nr of transcripts with no starts", len(set(tids_orf_no_coinciding_start)))
+    print("Number of transcripts considered", len(transcripts_cds_determined.keys())+len(transcripts_several_orfs))
     return transcripts_cds_determined, transcripts_several_orfs
 
-def filter_bed_file(transcripts_several_orfs, bedfile):
-    bed_of_transcripts = bedfile.filter(lambda gene: any(map(gene.name.__contains__, transcripts_several_orfs)))
+def filter_bed_file(transcriptIds, bedfile):
+    bed_of_transcripts = bedfile.filter(lambda gene: any(map(gene.name.__contains__, transcriptIds)))
     return bed_of_transcripts
     
                     
