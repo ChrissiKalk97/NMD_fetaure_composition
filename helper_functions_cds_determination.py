@@ -121,7 +121,7 @@ def get_cds_genomic_coordinates(orf_sequences):
         print("nr tids which are in bed", len(set(tids_bed)))
         print("nr tids for which start noted", len(set(tids_start)))
 
-        genomic_coordinates = pybedtools.BedTool(bed_string, from_string=True)
+        genomic_coordinates = pybedtools.BedTool(bed_string, from_string=True).saveas("genomic_ccordinates_ORFs.bed")
         #start_positions = pybedtools.BedTool(start_positions, from_string=True)
         return genomic_coordinates, start_positions
     except Exception as e:
@@ -230,6 +230,30 @@ def filter_bed_file(transcriptIds, bedfile):
     by the transcriptIds list"""
     bed_of_transcripts = bedfile.filter(lambda gene: any(map(gene.name.__contains__, transcriptIds)))
     return bed_of_transcripts
+
+def get_length_last_exon(transcript_ids_list, gtf_file):
+    gtf_file = GTF(gtf_file, check_ensembl_format=False)
+    last_exon_length_by_transcript = {}
+    transcript_string = get_transcript_string(transcript_ids_list)
+    transcript_entries = gtf_file\
+        .select_by_key('transcript_id', transcript_string)\
+        .select_by_key('feature', 'exon')\
+        .extract_data('transcript_id,start,end,exon_number,feature,strand',
+                       as_dict_of_merged_list=True)
+    for transcript_id in transcript_ids_list:
+        transcript_exons = transcript_entries[transcript_id]
+        transcript_exons = [transcript_exons[x:x+5] for x in range(0, len(transcript_exons), 5)]
+        strand = transcript_exons[0][4]
+        #sort transcript exons in ascending order
+        transcript_exons = sorted(transcript_exons, key = itemgetter(int(0)))
+        if strand == "+":
+            last_exon = transcript_exons[-1]
+        else:
+            last_exon = transcript_exons[0]
+        last_exon_length_by_transcript[transcript_id] = int(last_exon[1]) - int(last_exon[0])
+    return last_exon_length_by_transcript
     
+
+
                     
 #there is the -s option for bedtools to enforce strandedness: overlaps are only reported if on the same strand

@@ -22,6 +22,7 @@ def main():
 
     #get transcript ids
     transcript_ids = custom_gtf.get_tx_ids(nr=True)
+    #transcript_ids = sorted(transcript_ids)
     print("number of transcripts to investigate", len(transcript_ids))
 
 
@@ -46,7 +47,7 @@ def main():
     #get fasta of transcripts with known id
     if len(transcript_ids_wo_cds) > 0:
         print("known_tids_no_cds", len(transcript_ids_wo_cds))
-        determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, sys.argv[2], sys.argv[3])
+        transcripts_with_CDS = determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, sys.argv[2], sys.argv[3], sys.argv[1])
 
 
     print(len(NMD_features_df["50_nt"]), sum(NMD_features_df["50_nt"]))
