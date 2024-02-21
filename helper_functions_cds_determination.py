@@ -164,8 +164,9 @@ def get_ORF_start_by_gene(start_positions):
     
 def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_sites_by_gene):
     tids_orf_no_coinciding_start = [] 
-    transcripts_cds_determined = {}
+    transcripts_cds_determined = []
     transcripts_several_orfs = []
+    genes_tids_several_orfs = []
     for gene in gene_ids_ORF_transcripts:
         try:
             gene_info = reference_genes[gene]
@@ -209,22 +210,24 @@ def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_
                 for transcript, orfs in transcript_dict.items():
                     if len(orfs) > 1:
                         transcripts_several_orfs.append(transcript)
+                        genes_tids_several_orfs.append(gene)
                     else:
-                        #write the single ORF to output
-                        transcripts_cds_determined[transcript] = orfs
+                        #write the single ORF as a dict
+                        transcripts_cds_determined.append({"tid": transcript,\
+                        "name": orfs[0][3]+":"+orfs[0][4]+":"+orfs[0][5]+":"+orfs[0][6]+":"+orfs[0][7] , "name_tar": ""}) 
 
                 #calculation of tids without coinciding start sites: not needed just info
                 tids_wo_starts = list(set([start[4] for start in orf_wo_coinciding_start]))
                 tids_orf_no_coinciding_start.extend([tid for tid in tids_wo_starts if tid not in tids_with_starts])
-            
         except KeyError as e:
             pass
-        
-    print("nr of transcripts with no starts", len(set(tids_orf_no_coinciding_start)))
-    print("Number of transcripts considered", len(transcripts_cds_determined.keys())+len(transcripts_several_orfs))
-    return transcripts_cds_determined, transcripts_several_orfs
+    #print("nr of transcripts with no starts", len(set(tids_orf_no_coinciding_start)))
+    print("Number of transcripts considered", len(transcripts_cds_determined)+len(transcripts_several_orfs))
+    return transcripts_cds_determined, transcripts_several_orfs, genes_tids_several_orfs
 
 def filter_bed_file(transcriptIds, bedfile):
+    """Filter a bed file according to the name attribute containing any substrings provided
+    by the transcriptIds list"""
     bed_of_transcripts = bedfile.filter(lambda gene: any(map(gene.name.__contains__, transcriptIds)))
     return bed_of_transcripts
     
