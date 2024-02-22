@@ -30,7 +30,7 @@ def get_cds_end(cds : List[List[str]], strand : str)-> int:
                 
  
 def find_termination_codon(transcript_as_list: List[str], cds: List[List[str]]) -> int:
-    #get strand information and stopp codon if annotated
+    #get strand information and stop codon if annotated
     strand = transcript_as_list[0][4]
     
     #if stop codon annotated: return its first base position
@@ -53,15 +53,13 @@ def find_termination_codon(transcript_as_list: List[str], cds: List[List[str]]) 
             #if CDS end coincides with exon end
             else:
                 #extract exon number of coinciding exon
-                exon_num = exons.index(exon_end_is_cds_end)
+                exon_num = exons.index(exon_end_is_cds_end[0])
                 #annotate the start of the next exon as stop position
-                next_exon = exons[exon_num+1]
-                if len(next_exon) > 0:
+                try:
+                    next_exon = exons[exon_num+1]
                     #if cds ends with exon and there is a next exon, set stop position to first bp of next exon
-                    stop_position = int(next_exon[0][0])
-                else:
-                    #if there is no next exon, use last 3 bp of CDS as the stop codon???
-                    print(transcript_as_list)
+                    stop_position = int(next_exon[0])
+                except IndexError:
                     stop_position = cds_end-2
         else:
             exon_end_is_cds_end = [exon for exon in exons if str(cds_end) == exon[0]]
@@ -69,13 +67,16 @@ def find_termination_codon(transcript_as_list: List[str], cds: List[List[str]]) 
                 stop_position = cds_end-1
             else:
                 #extract exon number of coinciding exon
-                exon_num = exons.index(exon_end_is_cds_end)
+                exon_num = exons.index(exon_end_is_cds_end[0])
                 #annotate the start of the next exon as stop position
-                next_exon = exons[exon_num-1]
-                if len(next_exon) > 0:#if cds ends with exon and there is a next exon, set stop position to first bp of next exon
-                    stop_position = int(next_exon[0][1])
-                else:#assume stop position are the last 3 bases of the cds if cds ends with the last exon
-                    print(transcript_as_list)
+                try:
+                    if exon_num != 0:
+                        next_exon = exons[exon_num-1]
+                    else:
+                        next_exon = exon_end_is_cds_end[0]
+                    #if cds ends with exon and there is a next exon, set stop position to first bp of next exon
+                    stop_position = int(next_exon[1])
+                except IndexError:
                     stop_position = cds_end+2
         return stop_position
     
@@ -88,6 +89,10 @@ def compose_transcript(transcript_as_list, stop_position):
     #dict to store transcript coordinates for exon junctions and stop_position
     transcript_coordinates = {"length": 0, "exon_jc": {}, "stop_position": 0}
     last_exon = 0
+    if strand == "+":
+        exons = sorted(exons, key = itemgetter(int(0)))#sort list according to start positions of exons
+    else:
+        exons = sorted(exons, key = itemgetter(int(0)), reverse = True)
     for exon in exons:
         exon_num = exon[2]
         
@@ -121,10 +126,10 @@ def compose_transcript(transcript_as_list, stop_position):
         
     
     trans_coord_last_ejc = transcript_coordinates["length"] - transcript_coordinates["exon_jc"][str(last_exon)]
-    """if transcript_coordinates["stop_position"] == 0:
+    if transcript_coordinates["stop_position"] == 0:
         print("start")
         print(strand, stop_position)
         print(exons)
         print(transcript_as_list)
-        print("end")"""
+        print("end")
     return transcript_coordinates["stop_position"], trans_coord_last_ejc
