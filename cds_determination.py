@@ -97,15 +97,22 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, reference_file
     print("length only one cds", len(transcripts_cds_determined.index))
     print("length several cds", len(transcripts_with_CDS.index))
     transcripts_with_CDS = pd.concat([transcripts_with_CDS, transcripts_cds_determined], ignore_index=True)
-    transcripts_with_CDS['end ORF'] = transcripts_with_CDS['name']\
-        .str.extract(r'[A-Z0-9\.]*:[A-Z0-9\.]*:ORF\-\d*:\d*\-(\d)')
+    transcripts_with_CDS['end_ORF'] = transcripts_with_CDS['name']\
+        .str.extract(r'[A-Z0-9\.]*:[A-Z0-9\.]*:ORF[-]+\d*:\d*:(\d*)')
     print("len together", len(transcripts_with_CDS.index))
     
     last_exon_length_dict = get_length_last_exon(transcripts_with_CDS['tid'].to_list(), gtf_file)
     print(len(last_exon_length_dict) == len(transcripts_with_CDS.index))
     transcripts_with_CDS['last_exon_length'] = transcripts_with_CDS['tid'].map(last_exon_length_dict)
-    print(transcripts_with_CDS.head())
+    
 
+    #get the transcript length
+    t_length_dict = {}
+    for sequence_rec in sequences:
+        t_length_dict[sequence_rec.id] = len(sequence_rec.seq)
+    
+    transcripts_with_CDS['t_length'] = transcripts_with_CDS['tid'].map(t_length_dict)
+    print(transcripts_with_CDS.head())
 
     pb.cleanup(remove_all=True)
 
