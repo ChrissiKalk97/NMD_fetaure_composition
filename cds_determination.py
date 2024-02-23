@@ -11,7 +11,7 @@ from OrfFinder_py3 import OrfFinder
 
 def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, reference_file, reference_sequences_file, gtf_file):
     transcripts_no_cds = {k: transcript_gtftk_object[k] for k in transcript_gtftk_object.keys()\
-                               if k in transcript_ids_wo_cds}
+                               if k in transcript_ids_wo_cds[0:1000]}
     genome_file = reference_sequences_file
     #'./Homo_sapiens.GRCh38.dna.primary_assembly_110_new.fa'
     start_time = time.time()

@@ -58,7 +58,7 @@ def main():
         NMD_features_df = NMD_features_df.join(transcripts_with_CDS, how='outer')
         NMD_features_df['50_nt'].fillna(NMD_features_df['50_nt_rule'])
         print(NMD_features_df.head())
-    print(len(NMD_features_df["50_nt"]), sum(NMD_features_df["50_nt"]))
+    print(sum(NMD_features_df["50_nt_rule"].notna()), sum(NMD_features_df["50_nt_rule"][NMD_features_df["50_nt_rule"].notna()]))
     NMD_features_df.to_csv("NMD_features_df_NMD_trans.csv")
     return  0
 

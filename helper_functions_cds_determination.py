@@ -1,5 +1,6 @@
 import regex as re
 from operator import itemgetter
+from typing import Dict, List
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
@@ -93,16 +94,19 @@ def get_cds_genomic_coordinates(orf_sequences):
                 length += (exon_end - exon_start)+1
                 if orf_start < length:
                     if start_counter == 0:
-                        start_positions += chromosome + "\t" + str(exon_end - orf_start + former_length - 2) + "\t" + str(exon_end - orf_start + former_length) +\
+                        start_positions += chromosome + "\t" + str(exon_end - orf_start + former_length - 2)\
+                              + "\t" + str(exon_end - orf_start + former_length) +\
                             "\t" + name +"\t" + orf.annotations["score"] + "\t" + strand + "\n"
                         start_counter += 1
                     if exon_end - orf_end + former_length < exon_start:
-                        bed_string += chromosome + "\t" + str(exon_start) + "\t" + str(exon_end - orf_start + former_length) +\
+                        bed_string += chromosome + "\t" + str(exon_start) + "\t" +\
+                              str(exon_end - orf_start + former_length) +\
                             "\t" + name +"\t" + orf.annotations["score"] + "\t" + strand + "\n"
                         orf_start = length
                     else:
                         bed_string += chromosome + "\t" + str(exon_end - orf_end + former_length) +\
-                            "\t" + str(exon_end - orf_start + former_length) + "\t" + name + "\t" + orf.annotations["score"] + "\t" + strand + "\n"
+                            "\t" + str(exon_end - orf_start + former_length) + "\t" + name + "\t" +\
+                                  orf.annotations["score"] + "\t" + strand + "\n"
                         orf_end = 0
                 counter -= 1
                 
@@ -121,8 +125,8 @@ def get_cds_genomic_coordinates(orf_sequences):
         print("nr tids which are in bed", len(set(tids_bed)))
         print("nr tids for which start noted", len(set(tids_start)))
 
-        genomic_coordinates = pybedtools.BedTool(bed_string, from_string=True).saveas("genomic_ccordinates_ORFs.bed")
-        #start_positions = pybedtools.BedTool(start_positions, from_string=True)
+        genomic_coordinates = pybedtools.BedTool(bed_string, from_string=True)\
+            .saveas("genomic_ccordinates_ORFs.bed")
         return genomic_coordinates, start_positions
     except Exception as e:
         print(e)
@@ -132,6 +136,8 @@ def get_cds_genomic_coordinates(orf_sequences):
                     print(line)
             except:
                 print(line)
+
+
 
 
 def get_pct_reference(ref_name, gene_ids_ORF_transcripts):
@@ -162,76 +168,117 @@ def get_ORF_start_by_gene(start_positions):
             print(start)
     return start_sites_by_gene
     
+def get_reference_gene_info(reference_genes: Dict, gene: str) -> tuple[List[List[str]], List[str]]:
+    """obtain all entries of reference gtf belonging to the gene considered and extract all transcript
+    ids of the gene"""
+    gene_info = reference_genes[gene]
+    #build sublist for each feature of the transcript
+    gene_info = [gene_info[x:x+8] for x in range(0, len(gene_info), 8)]
+    tids = [gene[0] for gene in gene_info]
+    tids = list(set(tids))
+    return gene_info, tids
+
+def get_reference_start_sites(gene_info, tids: List[str]) -> List[List[str]]:
+    """Calcualte the start sites of the CDS of the reference transcripts belonging
+      to the gene considerd"""
+    #separate information per transcript
+    gene_dict = {}
+    start_sites = []
+    for tid in tids:
+        gene_dict[tid] = [gene for gene in gene_info if gene[0] == tid]
+        start_sites += [sub_list for sub_list in gene_dict[tid] if 'start_codon' in sub_list]
+        if not start_sites:
+            cds = [sub_list for sub_list in gene_dict[tid] if 'CDS' in sub_list]
+            try:
+                start_sites.append(get_cds_start(cds, cds[0][5]))
+            except:
+                print("No start sites and no CDS found!")
+                #seems like this never happens when focusing on protein_coding transcripts
+    return start_sites
+
+def find_orfs_to_consider(start_sites: List[List[str]], orfs_starts_for_gene):
+    """Take start sites of reference and check which ORF start sites coincide: consider these ORFs
+    Also consider ORFS for which no coinc start site if no other ORF with css found for the transcript"""
+    starts = [start[1] for start in start_sites]
+    orf_with_coinciding_start = [orf for orf in orfs_starts_for_gene if orf[1] in starts] 
+    orf_wo_coinciding_start = [orf for orf in orfs_starts_for_gene if orf[1] not in starts]
+    tids_with_starts = list(set([start[4] for start in orf_with_coinciding_start])) 
+    #add orfs with tids that are not present in the orfs with coinc start sites 
+    orfs_to_consider =  orf_with_coinciding_start +\
+            [orf for orf in orf_wo_coinciding_start if orf[4] not in tids_with_starts]
+    return orfs_to_consider
+
+def get_transcript_orf_dict(orfs_to_consider):
+    transcript_dict = {}
+    for orf in orfs_to_consider:
+        transcript_id = orf[4]
+        if transcript_id not in transcript_dict.keys():
+            transcript_dict[transcript_id] = [orf]
+        else: 
+            transcript_dict[transcript_id].append([orf])
+    return transcript_dict
+
+def categorize_transcripts_by_nr_orfs(transcript_dict: dict, transcripts_cds_determined: list,\
+        transcripts_several_orfs: list, genes_tids_several_orfs: List[str], gene: str)\
+            -> tuple[List[str], List[str], List[dict]]:
+    for transcript, orfs in transcript_dict.items():
+        if len(orfs) > 1:
+            transcripts_several_orfs.append(transcript)
+            genes_tids_several_orfs.append(gene)
+        else:
+            #write the single ORF as a dict
+            transcripts_cds_determined.append({"tid": transcript,\
+            "name": orfs[0][3] + ":" + orfs[0][4]+":" + orfs[0][5]\
+                    + ":" + orfs[0][6] + ":" + orfs[0][7] , "name_tar": ""})
+    return transcripts_several_orfs, genes_tids_several_orfs, transcripts_cds_determined
+
 def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_sites_by_gene):
-    tids_orf_no_coinciding_start = [] 
+    """Determines CDS for transcripts where only one ORF is considered, notes down ORFs where several
+    need to be considered, filters for transcripts without protein coding reference"""
+    #tids_orf_no_coinciding_start = [] 
     transcripts_cds_determined = []
     transcripts_several_orfs = []
     genes_tids_several_orfs = []
     for gene in gene_ids_ORF_transcripts:
         try:
-            gene_info = reference_genes[gene]
+            gene_info, tids = get_reference_gene_info(reference_genes, gene)
+            
+            #get predicted ORf start sites for the corresponding gene
             orfs_starts_for_gene = orf_start_sites_by_gene[gene]
-            #build sublist for each feature of the transcript
-            gene_info = [gene_info[x:x+8] for x in range(0, len(gene_info), 8)]
-            tids = [gene[0] for gene in gene_info]
-            tids = list(set(tids))
-
-            #separate information per transcript
-            gene_dict = {}
-            start_sites = []
-            for tid in tids:
-                gene_dict[tid] = [gene for gene in gene_info if gene[0] == tid]
-                start_sites += [sub_list for sub_list in gene_dict[tid] if 'start_codon' in sub_list]
-                if not start_sites:
-                    cds = [sub_list for sub_list in gene_dict[tid] if 'CDS' in sub_list]
-                    try:
-                        start_sites.append(get_cds_start(cds, cds[0][5]))
-                    except e:
-                        print("No start sites and no CDS found!", e)
-                        #seems like this never happens when focusing on protein_coding transcripts
-
+            
+            #get start sites of the protein coding reference CDS
+            start_sites = get_reference_start_sites(gene_info, tids)
             if start_sites:
-                starts = [start[1] for start in start_sites]
-                orf_with_coinciding_start = [orf for orf in orfs_starts_for_gene if orf[1] in starts] 
-                orf_wo_coinciding_start = [orf for orf in orfs_starts_for_gene if orf[1] not in starts]
-                tids_with_starts = list(set([start[4] for start in orf_with_coinciding_start])) 
-                #add orfs with tids that are not present in the orfs with coinc start sites 
-                orfs_to_consider =  orf_with_coinciding_start +\
-                      [orf for orf in orf_wo_coinciding_start if orf[4] not in tids_with_starts]
-                
-                transcript_dict = {}
-                for orf in orfs_to_consider:
-                    transcript_id = orf[4]
-                    if transcript_id not in transcript_dict.keys():
-                        transcript_dict[transcript_id] = [orf]
-                    else: 
-                        transcript_dict[transcript_id].append([orf])
-                
-                for transcript, orfs in transcript_dict.items():
-                    if len(orfs) > 1:
-                        transcripts_several_orfs.append(transcript)
-                        genes_tids_several_orfs.append(gene)
-                    else:
-                        #write the single ORF as a dict
-                        transcripts_cds_determined.append({"tid": transcript,\
-                        "name": orfs[0][3]+":"+orfs[0][4]+":"+orfs[0][5]+":"+orfs[0][6]+":"+orfs[0][7] , "name_tar": ""}) 
-
+                orfs_to_consider = find_orfs_to_consider(start_sites, orfs_starts_for_gene)
+                transcript_dict = get_transcript_orf_dict(orfs_to_consider)
+                transcripts_several_orfs, genes_tids_several_orfs, transcripts_cds_determined\
+                  =  categorize_transcripts_by_nr_orfs(transcript_dict, transcripts_cds_determined,\
+                    transcripts_several_orfs, genes_tids_several_orfs, gene)
+            
                 #calculation of tids without coinciding start sites: not needed just info
-                tids_wo_starts = list(set([start[4] for start in orf_wo_coinciding_start]))
-                tids_orf_no_coinciding_start.extend([tid for tid in tids_wo_starts if tid not in tids_with_starts])
+                #tids_wo_starts = list(set([start[4] for start in orf_wo_coinciding_start]))
+                #tids_orf_no_coinciding_start.extend([tid for tid in tids_wo_starts\
+                                                      #if tid not in tids_with_starts])
         except KeyError as e:
             pass
     #print("nr of transcripts with no starts", len(set(tids_orf_no_coinciding_start)))
-    print("Number of transcripts considered", len(transcripts_cds_determined)+len(transcripts_several_orfs))
+    print("Number of transcripts considered",\
+           len(transcripts_cds_determined)+len(transcripts_several_orfs))
     return transcripts_cds_determined, transcripts_several_orfs, genes_tids_several_orfs
+
+
 
 def filter_bed_file(transcriptIds, bedfile):
     """Filter a bed file according to the name attribute containing any substrings provided
     by the transcriptIds list"""
-    bed_of_transcripts = bedfile.filter(lambda gene: any(map(gene.name.__contains__, transcriptIds)))
+    bed_of_transcripts = bedfile.filter(lambda gene:\
+                                any(list(map(gene.name.__contains__, transcriptIds))))
     return bed_of_transcripts
 
+
+
 def get_length_last_exon(transcript_ids_list, gtf_file):
+    """extract last exon length per transcript from reference"""
     gtf_file = GTF(gtf_file, check_ensembl_format=False)
     last_exon_length_by_transcript = {}
     transcript_string = get_transcript_string(transcript_ids_list)
