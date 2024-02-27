@@ -1,6 +1,7 @@
 import regex as re
 from operator import itemgetter
 from typing import Dict, List
+import pandas as pd
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
@@ -8,7 +9,16 @@ import pybedtools
 from pybedtools import BedTool
 from pygtftk.gtf_interface import GTF
 
-from new_helper_functions import get_transcript_string, get_cds_start
+def get_transcript_string(transcript_ids: List[str]) -> str:
+    """get string of transcript or other ids for filtering 
+    of a GTF class object from pygtftk"""
+    transcript_string = ""
+    for transcript_id in transcript_ids[:-1]:
+        transcript_string += transcript_id+","
+    transcript_string += transcript_ids[-1]
+    return transcript_string
+
+
 
 def get_fasta_tid(transcripts_no_cds, genome_file):
     """creates the fasta sequence of a transcript from its exon coordinates 
@@ -178,6 +188,25 @@ def get_reference_gene_info(reference_genes: Dict, gene: str) -> tuple[List[List
     tids = list(set(tids))
     return gene_info, tids
 
+def get_cds_start(cds : List[List[str]], strand : str):
+    """obtain CDS start position for a transcript's CDS 
+    information given as a list a lists"""
+    start_position_plus = float("inf")
+    start_position_minus = 0
+    for partial_cds in cds:
+        if strand == "+":
+            five_prime = int(partial_cds[1])
+            if start_position_plus < five_prime:
+                start_position_plus = five_prime
+                partial_cds[2] = str(int(partial_cds[1])+2)
+        else:
+            five_prime = int(partial_cds[2])
+            if start_position_minus > five_prime:
+                start_position_minus = five_prime
+                partial_cds[1] = str(int(partial_cds[2])-2)
+    return partial_cds
+
+
 def get_reference_start_sites(gene_info, tids: List[str]) -> List[List[str]]:
     """Calcualte the start sites of the CDS of the reference transcripts belonging
       to the gene considerd"""
@@ -264,6 +293,7 @@ def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_
     #print("nr of transcripts with no starts", len(set(tids_orf_no_coinciding_start)))
     print("Number of transcripts considered",\
            len(transcripts_cds_determined)+len(transcripts_several_orfs))
+    transcripts_cds_determined = pd.DataFrame(transcripts_cds_determined)
     return transcripts_cds_determined, transcripts_several_orfs, genes_tids_several_orfs
 
 
@@ -272,8 +302,28 @@ def filter_bed_file(transcriptIds, bedfile):
     """Filter a bed file according to the name attribute containing any substrings provided
     by the transcriptIds list"""
     bed_of_transcripts = bedfile.filter(lambda gene:\
-                                any(list(map(gene.name.__contains__, transcriptIds))))
+                                gene.name.split(":")[1] in transcriptIds)
     return bed_of_transcripts
+
+
+
+
+    
+def intersect_and_select_greatest_overlap(transcripts_several_orfs_bed, pc_reference_bed):
+    intersection = transcripts_several_orfs_bed.intersect(pc_reference_bed, wao = True).saveas('intersection.bed')
+    summed_counts = pd.read_table(intersection.fn, names=['chrom', 'start', 'stop', 'name', 'score', 'strand',\
+                    'chrom_tar', 'start_tar', 'stop_tar', 'name_tar', 'score_tar', 'strand_tar', 'overlap'])
+    
+    summed_counts = summed_counts.groupby(['name', 'name_tar'])['overlap'].sum()
+    summed_counts = summed_counts.reset_index()
+    
+    
+    summed_counts['tid'] = summed_counts['name'].str.extract(r'[A-Z0-9\.]*:([A-Z0-9\.]*):.*')
+    rowIds = summed_counts.groupby('tid')['overlap'].idxmax()
+    transcripts_with_CDS = summed_counts.loc[rowIds]
+    transcripts_with_CDS = transcripts_with_CDS.reset_index()[["name", "name_tar", "tid"]]
+    #append the others with only one CDS 
+    return transcripts_with_CDS
 
 
 
@@ -299,7 +349,21 @@ def get_length_last_exon(transcript_ids_list, gtf_file):
             last_exon = transcript_exons[0]
         last_exon_length_by_transcript[transcript_id] = int(last_exon[1]) - int(last_exon[0])
     return last_exon_length_by_transcript
+
+def calculate_50nt_rule(transcripts_with_CDS: pd.DataFrame, sequences) -> pd.DataFrame:
+    t_length_dict = {}
+    for sequence_rec in sequences:
+        t_length_dict[sequence_rec.id] = len(sequence_rec.seq)
     
+    transcripts_with_CDS['t_length'] = transcripts_with_CDS['tid'].map(t_length_dict)
+    transcripts_with_CDS.set_index('tid', inplace = True)
+    transcripts_with_CDS['distance_stop_EJC'] = \
+    transcripts_with_CDS['t_length'].astype(int) -\
+    transcripts_with_CDS['last_exon_length'].astype(int) -\
+    transcripts_with_CDS['end_ORF'].astype(int)
+    transcripts_with_CDS['50_nt_rule'] = transcripts_with_CDS['distance_stop_EJC'].ge(50).astype(int)
+    return transcripts_with_CDS
+
 
 
                     

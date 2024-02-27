@@ -1,6 +1,7 @@
 import sys
 import time
 
+import numpy as np
 import regex as re
 import pandas as pd
 from pygtftk.gtf_interface import GTF
@@ -45,21 +46,14 @@ def main():
     if len(transcript_ids_wo_cds) > 0:
         print("known_tids_no_cds", len(transcript_ids_wo_cds))
         transcripts_with_CDS = determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, sys.argv[2], sys.argv[3], sys.argv[1])
-        print(type(transcripts_with_CDS['end_ORF']))
-        print(type(transcripts_with_CDS['last_exon_length']))
-        transcripts_with_CDS.set_index('tid', inplace = True)
-        transcripts_with_CDS['distance_stop_EJC'] = \
-        transcripts_with_CDS['t_length'].astype(int) -\
-        transcripts_with_CDS['last_exon_length'].astype(int) -\
-        transcripts_with_CDS['end_ORF'].astype(int)
-
-        transcripts_with_CDS['50_nt_rule'] = transcripts_with_CDS['distance_stop_EJC'].ge(50).astype(int)
         print(transcripts_with_CDS.head())
+
         NMD_features_df = NMD_features_df.join(transcripts_with_CDS, how='outer')
-        NMD_features_df['50_nt'].fillna(NMD_features_df['50_nt_rule'])
+        NMD_features_df['50_nt'] = np.where(NMD_features_df['50_nt'].isna(), NMD_features_df['50_nt_rule'], NMD_features_df['50_nt'])
+        #NMD_features_df['50_nt'].fillna(NMD_features_df['50_nt_rule'])
         print(NMD_features_df.head())
-    print(sum(NMD_features_df["50_nt_rule"].notna()), sum(NMD_features_df["50_nt_rule"][NMD_features_df["50_nt_rule"].notna()]))
-    NMD_features_df.to_csv("NMD_features_df_NMD_trans.csv")
+    print(sum(NMD_features_df["50_nt"].notna()), sum(NMD_features_df["50_nt"][NMD_features_df["50_nt"].notna()]))
+    NMD_features_df.to_csv(sys.argv[4])
     return  0
 
 
