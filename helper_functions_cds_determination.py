@@ -302,7 +302,7 @@ def filter_bed_file(transcriptIds, bedfile):
     """Filter a bed file according to the name attribute containing any substrings provided
     by the transcriptIds list"""
     bed_of_transcripts = bedfile.filter(lambda gene:\
-                                gene.name.split(":")[1] in transcriptIds)
+                                gene.name.split(":")[1] in set(transcriptIds))
     return bed_of_transcripts
 
 
