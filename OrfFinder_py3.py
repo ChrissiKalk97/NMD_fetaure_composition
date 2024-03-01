@@ -9,7 +9,7 @@ from Bio.SeqRecord import SeqRecord
 
 
 
-minOrfLength=50  #minimum number of amino acids per ORF
+minOrfLength=20  #minimum number of amino acids per ORF
 
 #original codons functions by natasha.sernova obtained from Biostars:
 #https://www.biostars.org/p/229060/

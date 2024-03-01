@@ -1,3 +1,4 @@
+import pandas as pd
 from helper_functions_CDS_present import compose_transcript, find_termination_codon
 
 
@@ -15,9 +16,10 @@ def handle_cds_transcripts(transcript_gtftk_object, transcript_ids, NMD_features
             NMD_features_df.loc[transcript_id,"has_cds"] = 1
             stop_pos_genome = find_termination_codon(transcript_info, cds)
             stop_pos_transcript, last_ejc = compose_transcript(transcript_info, stop_pos_genome)
-            if stop_pos_transcript == 0:
+            if stop_pos_transcript == 0 or None:
                 counter += 1
-            if (last_ejc - stop_pos_transcript) >= 50:
+                NMD_features_df.loc[transcript_id, "50_nt"] = pd.NA
+            elif (last_ejc - stop_pos_transcript) >= 50:
                 NMD_features_df.loc[transcript_id, "50_nt"] = 1
             else:
                 NMD_features_df.loc[transcript_id, "50_nt"] = 0

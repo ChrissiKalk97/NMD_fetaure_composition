@@ -10,26 +10,27 @@ from pybedtools import BedTool
 from pygtftk.gtf_interface import GTF
 
 def get_transcript_string(transcript_ids: List[str]) -> str:
-    """get string of transcript or other ids for filtering 
-    of a GTF class object from pygtftk"""
-    transcript_string = ""
-    for transcript_id in transcript_ids[:-1]:
-        transcript_string += transcript_id+","
+    '''get string of transcript or other ids for filtering 
+    of a GTF class object from pygtftk'''
+    transcript_string = ''
+    if len(transcript_ids) > 1: 
+        for transcript_id in transcript_ids[:-1]:
+            transcript_string += transcript_id+','
     transcript_string += transcript_ids[-1]
     return transcript_string
 
 
 
 def get_fasta_tid(transcripts_no_cds, genome_file):
-    """creates the fasta sequence of a transcript from its exon coordinates 
-    of the gtf file """
-    genome_dict = SeqIO.index(genome_file, "fasta")
+    '''creates the fasta sequence of a transcript from its exon coordinates 
+    of the gtf file '''
+    genome_dict = SeqIO.index(genome_file, 'fasta')
     sequences = []
     for transcript_id, transcript_info in transcripts_no_cds.items():
-        fasta_string = ""
-        description = ""
+        fasta_string = ''
+        description = ''
         transcript_info = [transcript_info[x:x+8] for x in range(0, len(transcript_info), 8)]
-        transcript_exons = [sub_list for sub_list in transcript_info if "exon" in sub_list]
+        transcript_exons = [sub_list for sub_list in transcript_info if 'exon' in sub_list]
         #sort list according to start positions of exons
         transcript_exons = sorted(transcript_exons, key = itemgetter(int(0)))
         for exon in transcript_exons:
@@ -40,83 +41,83 @@ def get_fasta_tid(transcripts_no_cds, genome_file):
 
             #subsetting the chromosome at the respecitve start and stop positions
             #add exon number and genomic start end to the description
-            description += "exon" + exon[2] + "-" + exon[0] + "-" + exon[1] + ":"
-        #add chromosome and strand in front of description, remove the last ":"
-        description = "chrom" + exon[5] + ":" + "strand" + exon[4] + ":" + description[:-1]
-        if exon[4] == "-":
+            description += 'exon' + exon[2] + '-' + exon[0] + '-' + exon[1] + ':'
+        #add chromosome and strand in front of description, remove the last ':'
+        description = 'chrom' + exon[5] + ':' + 'strand' + exon[4] + ':' + description[:-1]
+        if exon[4] == '-':
             fasta_string = Seq(fasta_string).reverse_complement()
         sequences.append(SeqRecord(id = transcript_id, seq = fasta_string, name = exon[6],\
-                                    description = description, annotations={"score": exon[7]}))#name is gene
+                                    description = description, annotations={'score': exon[7]}))#name is gene
     return sequences
     
 
 def get_cds_genomic_coordinates(orf_sequences):
-    """Calculates the genomic positions of the ORFs found in the ORF finder
+    '''Calculates the genomic positions of the ORFs found in the ORF finder
     step and stores them in a bed object, the exons and partial exons 
-    constituting the ORF are listed"""
-    bed_string = ""
-    start_positions = ""
+    constituting the ORF are listed'''
+    bed_string = ''
+    start_positions = ''
     transcripts = []
     for orf in orf_sequences:
-        transcripts.append(orf.id.split(":")[0])
-        name = orf.name + ":" + orf.id
-        orf_start = int(orf.id.split(":")[2])
-        orf_end = int(orf.id.split(":")[3])
-        transcript_info = orf.description.split(":")
-        chromosome = re.match("chrom(.+)", transcript_info[0]).group(1)
-        strand = re.match("strand(.+)", transcript_info[1]).group(1)
+        transcripts.append(orf.id.split(':')[0])
+        name = orf.name + ':' + orf.id
+        orf_start = int(orf.id.split(':')[2])
+        orf_end = int(orf.id.split(':')[3])
+        transcript_info = orf.description.split(':')
+        chromosome = re.match('chrom(.+)', transcript_info[0]).group(1)
+        strand = re.match('strand(.+)', transcript_info[1]).group(1)
         length = 0
         start_counter = 0
-        if strand == "+":
+        if strand == '+':
             counter = 2
             while orf_end > 0:
                 exon = transcript_info[counter]
-                exon_start = int(exon.split("-")[1])
-                exon_end = int(exon.split("-")[2])
+                exon_start = int(exon.split('-')[1])
+                exon_end = int(exon.split('-')[2])
                 former_length = length
                 length += (exon_end - exon_start)+1#exon end and start are included
                 if orf_start < length: 
                 #this strictly smaller is needed here, otherwise the error occurs that the stop is smaller than the start
                     if start_counter == 0:
                             #note down the start position
-                            start_positions += chromosome + "\t" + str(exon_start + orf_start - former_length) + "\t" +\
-                            str(exon_start + orf_start - former_length + 2) + "\t" + name +"\t" + orf.annotations["score"]\
-                                  + "\t" + strand+ "\n"
+                            start_positions += chromosome + '\t' + str(exon_start + orf_start - former_length) + '\t' +\
+                            str(exon_start + orf_start - former_length + 2) + '\t' + name +'\t' + orf.annotations['score']\
+                                  + '\t' + strand+ '\n'
                             start_counter += 1
                     if exon_start + orf_end - former_length > exon_end:
-                        bed_string += chromosome + "\t" + str(exon_start + orf_start - former_length) + "\t" +\
-                            str(exon_end) + "\t" + name +"\t" + orf.annotations["score"] + "\t" + strand + "\n"
+                        bed_string += chromosome + '\t' + str(exon_start + orf_start - former_length) + '\t' +\
+                            str(exon_end) + '\t' + name +'\t' + orf.annotations['score'] + '\t' + strand + '\n'
                         orf_start = length#promote orf start such that it is former length 
                         #for the next exon and we start at the first exon position
                     else:
-                        bed_string += chromosome + "\t" + str(exon_start + orf_start - former_length)\
-                              + "\t" + str(exon_start + orf_end - former_length) + "\t" + name + "\t"\
-                                  + orf.annotations["score"] + "\t" + strand + "\n"
+                        bed_string += chromosome + '\t' + str(exon_start + orf_start - former_length)\
+                              + '\t' + str(exon_start + orf_end - former_length) + '\t' + name + '\t'\
+                                  + orf.annotations['score'] + '\t' + strand + '\n'
                         orf_end = 0
                 counter += 1
         else:
             counter = len(transcript_info) - 1
             while orf_end > 0:
                 exon =  transcript_info[counter]
-                exon_start = int(exon.split("-")[1])
-                exon_end = int(exon.split("-")[2])
+                exon_start = int(exon.split('-')[1])
+                exon_end = int(exon.split('-')[2])
                 former_length = length
                 length += (exon_end - exon_start)+1
                 if orf_start < length:
                     if start_counter == 0:
-                        start_positions += chromosome + "\t" + str(exon_end - orf_start + former_length - 2)\
-                              + "\t" + str(exon_end - orf_start + former_length) +\
-                            "\t" + name +"\t" + orf.annotations["score"] + "\t" + strand + "\n"
+                        start_positions += chromosome + '\t' + str(exon_end - orf_start + former_length - 2)\
+                              + '\t' + str(exon_end - orf_start + former_length) +\
+                            '\t' + name +'\t' + orf.annotations['score'] + '\t' + strand + '\n'
                         start_counter += 1
                     if exon_end - orf_end + former_length < exon_start:
-                        bed_string += chromosome + "\t" + str(exon_start) + "\t" +\
+                        bed_string += chromosome + '\t' + str(exon_start) + '\t' +\
                               str(exon_end - orf_start + former_length) +\
-                            "\t" + name +"\t" + orf.annotations["score"] + "\t" + strand + "\n"
+                            '\t' + name +'\t' + orf.annotations['score'] + '\t' + strand + '\n'
                         orf_start = length
                     else:
-                        bed_string += chromosome + "\t" + str(exon_end - orf_end + former_length) +\
-                            "\t" + str(exon_end - orf_start + former_length) + "\t" + name + "\t" +\
-                                  orf.annotations["score"] + "\t" + strand + "\n"
+                        bed_string += chromosome + '\t' + str(exon_end - orf_end + former_length) +\
+                            '\t' + str(exon_end - orf_start + former_length) + '\t' + name + '\t' +\
+                                  orf.annotations['score'] + '\t' + strand + '\n'
                         orf_end = 0
                 counter -= 1
                 
@@ -131,18 +132,18 @@ def get_cds_genomic_coordinates(orf_sequences):
         for entry in bed_string.split('\n'):
             tids_bed.append(re.split(r'\t|:', entry)[4])
         
-        print("nr of transcripts that were in ORF file", len(set(transcripts)))
-        print("nr tids which are in bed", len(set(tids_bed)))
-        print("nr tids for which start noted", len(set(tids_start)))
+        print('nr of transcripts that were in ORF file', len(set(transcripts)))
+        print('nr tids which are in bed', len(set(tids_bed)))
+        print('nr tids for which start noted', len(set(tids_start)))
 
         genomic_coordinates = pybedtools.BedTool(bed_string, from_string=True)\
-            .saveas("genomic_ccordinates_ORFs.bed")
+            .saveas('genomic_ccordinates_ORFs.bed')
         return genomic_coordinates, start_positions
     except Exception as e:
         print(e)
-        for line in bed_string.split("\n"):
+        for line in bed_string.split('\n'):
             try:
-                if line.split("\t")[1] > line.split("\t")[2]:
+                if line.split('\t')[1] > line.split('\t')[2]:
                     print(line)
             except:
                 print(line)
@@ -179,8 +180,8 @@ def get_ORF_start_by_gene(start_positions):
     return start_sites_by_gene
     
 def get_reference_gene_info(reference_genes: Dict, gene: str) -> tuple[List[List[str]], List[str]]:
-    """obtain all entries of reference gtf belonging to the gene considered and extract all transcript
-    ids of the gene"""
+    '''obtain all entries of reference gtf belonging to the gene considered and extract all transcript
+    ids of the gene'''
     gene_info = reference_genes[gene]
     #build sublist for each feature of the transcript
     gene_info = [gene_info[x:x+8] for x in range(0, len(gene_info), 8)]
@@ -189,12 +190,12 @@ def get_reference_gene_info(reference_genes: Dict, gene: str) -> tuple[List[List
     return gene_info, tids
 
 def get_cds_start(cds : List[List[str]], strand : str):
-    """obtain CDS start position for a transcript's CDS 
-    information given as a list a lists"""
-    start_position_plus = float("inf")
+    '''obtain CDS start position for a transcript's CDS 
+    information given as a list a lists'''
+    start_position_plus = float('inf')
     start_position_minus = 0
     for partial_cds in cds:
-        if strand == "+":
+        if strand == '+':
             five_prime = int(partial_cds[1])
             if start_position_plus < five_prime:
                 start_position_plus = five_prime
@@ -208,8 +209,8 @@ def get_cds_start(cds : List[List[str]], strand : str):
 
 
 def get_reference_start_sites(gene_info, tids: List[str]) -> List[List[str]]:
-    """Calcualte the start sites of the CDS of the reference transcripts belonging
-      to the gene considerd"""
+    '''Calcualte the start sites of the CDS of the reference transcripts belonging
+      to the gene considerd'''
     #separate information per transcript
     gene_dict = {}
     start_sites = []
@@ -221,20 +222,25 @@ def get_reference_start_sites(gene_info, tids: List[str]) -> List[List[str]]:
             try:
                 start_sites.append(get_cds_start(cds, cds[0][5]))
             except:
-                print("No start sites and no CDS found!")
+                print('No start sites and no CDS found!')
                 #seems like this never happens when focusing on protein_coding transcripts
     return start_sites
 
 def find_orfs_to_consider(start_sites: List[List[str]], orfs_starts_for_gene):
-    """Take start sites of reference and check which ORF start sites coincide: consider these ORFs
-    Also consider ORFS for which no coinc start site if no other ORF with css found for the transcript"""
+    '''Take start sites of reference and check which ORF start sites coincide: consider these ORFs
+    Also consider ORFS for which no coinc start site if no other ORF with css found for the transcript'''
     starts = [start[1] for start in start_sites]
     orf_with_coinciding_start = [orf for orf in orfs_starts_for_gene if orf[1] in starts] 
+    #print('start_sites', start_sites)
+    #for orf in orf_with_coinciding_start:
+        #print(orf)
+        #print("matching starts", [start for start in start_sites if start[1] == orf[1]])
     orf_wo_coinciding_start = [orf for orf in orfs_starts_for_gene if orf[1] not in starts]
-    tids_with_starts = list(set([start[4] for start in orf_with_coinciding_start])) 
+    tids_with_starts = set([start[4] for start in orf_with_coinciding_start])
     #add orfs with tids that are not present in the orfs with coinc start sites 
     orfs_to_consider =  orf_with_coinciding_start +\
             [orf for orf in orf_wo_coinciding_start if orf[4] not in tids_with_starts]
+    #print("orfs to consider", orfs_to_consider)
     return orfs_to_consider
 
 def get_transcript_orf_dict(orfs_to_consider):
@@ -244,7 +250,7 @@ def get_transcript_orf_dict(orfs_to_consider):
         if transcript_id not in transcript_dict.keys():
             transcript_dict[transcript_id] = [orf]
         else: 
-            transcript_dict[transcript_id].append([orf])
+            transcript_dict[transcript_id].append(orf)
     return transcript_dict
 
 def categorize_transcripts_by_nr_orfs(transcript_dict: dict, transcripts_cds_determined: list,\
@@ -252,19 +258,19 @@ def categorize_transcripts_by_nr_orfs(transcript_dict: dict, transcripts_cds_det
             -> tuple[List[str], List[str], List[dict]]:
     for transcript, orfs in transcript_dict.items():
         if len(orfs) > 1:
-            transcripts_several_orfs.append(transcript)
+            orf_list = [orf[3]+':'+orf[4]+':'+orf[5]+':'+orf[6]+':'+orf[7] for orf in orfs]
+            transcripts_several_orfs = transcripts_several_orfs + orf_list
             genes_tids_several_orfs.append(gene)
         else:
             #write the single ORF as a dict
-            transcripts_cds_determined.append({"tid": transcript,\
-            "name": orfs[0][3] + ":" + orfs[0][4]+":" + orfs[0][5]\
-                    + ":" + orfs[0][6] + ":" + orfs[0][7] , "name_tar": ""})
+            transcripts_cds_determined.append({'tid': transcript,\
+            'name': orfs[0][3] + ':' + orfs[0][4]+':' + orfs[0][5]\
+                    + ':' + orfs[0][6] + ':' + orfs[0][7] , 'name_tar': ''})
     return transcripts_several_orfs, genes_tids_several_orfs, transcripts_cds_determined
 
 def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_sites_by_gene):
-    """Determines CDS for transcripts where only one ORF is considered, notes down ORFs where several
-    need to be considered, filters for transcripts without protein coding reference"""
-    #tids_orf_no_coinciding_start = [] 
+    '''Determines CDS for transcripts where only one ORF is considered, notes down ORFs where several
+    need to be considered, filters for transcripts without protein coding reference'''
     transcripts_cds_determined = []
     transcripts_several_orfs = []
     genes_tids_several_orfs = []
@@ -290,29 +296,26 @@ def coinciding_start_sites(gene_ids_ORF_transcripts, reference_genes, orf_start_
                                                       #if tid not in tids_with_starts])
         except KeyError as e:
             pass
-    #print("nr of transcripts with no starts", len(set(tids_orf_no_coinciding_start)))
-    print("Number of transcripts considered",\
-           len(transcripts_cds_determined)+len(transcripts_several_orfs))
+    
     transcripts_cds_determined = pd.DataFrame(transcripts_cds_determined)
     return transcripts_cds_determined, transcripts_several_orfs, genes_tids_several_orfs
 
 
 
 def filter_bed_file(transcriptIds, bedfile):
-    """Filter a bed file according to the name attribute containing any substrings provided
-    by the transcriptIds list"""
+    '''Filter a bed file according to the name attribute being present in a set'''
     bed_of_transcripts = bedfile.filter(lambda gene:\
-                                gene.name.split(":")[1] in set(transcriptIds))
+                                gene.name in set(transcriptIds))
     return bed_of_transcripts
 
 
 
 
     
-def intersect_and_select_greatest_overlap(transcripts_several_orfs_bed, pc_reference_bed):
-    intersection = transcripts_several_orfs_bed.intersect(pc_reference_bed, wao = True).saveas('intersection.bed')
+def intersect_and_select_greatest_overlap(transcripts_several_orfs_bed, pc_reference_bed):#s: enforce strandedness
+    intersection = transcripts_several_orfs_bed.intersect(pc_reference_bed, wao = True, s = True).saveas('intersection.bed')
     summed_counts = pd.read_table(intersection.fn, names=['chrom', 'start', 'stop', 'name', 'score', 'strand',\
-                    'chrom_tar', 'start_tar', 'stop_tar', 'name_tar', 'score_tar', 'strand_tar', 'overlap'])
+                    'chrom_tar', 'start_tar', 'stop_tar', 'name_tar', 'score_tar', 'strand_tar', 'overlap'], low_memory=False)
     
     summed_counts = summed_counts.groupby(['name', 'name_tar'])['overlap'].sum()
     summed_counts = summed_counts.reset_index()
@@ -321,14 +324,14 @@ def intersect_and_select_greatest_overlap(transcripts_several_orfs_bed, pc_refer
     summed_counts['tid'] = summed_counts['name'].str.extract(r'[A-Z0-9\.]*:([A-Z0-9\.]*):.*')
     rowIds = summed_counts.groupby('tid')['overlap'].idxmax()
     transcripts_with_CDS = summed_counts.loc[rowIds]
-    transcripts_with_CDS = transcripts_with_CDS.reset_index()[["name", "name_tar", "tid"]]
+    transcripts_with_CDS = transcripts_with_CDS.reset_index()[['name', 'name_tar', 'tid']]
     #append the others with only one CDS 
     return transcripts_with_CDS
 
 
 
 def get_length_last_exon(transcript_ids_list, gtf_file):
-    """extract last exon length per transcript from reference"""
+    '''extract last exon length per transcript from reference'''
     gtf_file = GTF(gtf_file, check_ensembl_format=False)
     last_exon_length_by_transcript = {}
     transcript_string = get_transcript_string(transcript_ids_list)
@@ -343,7 +346,7 @@ def get_length_last_exon(transcript_ids_list, gtf_file):
         strand = transcript_exons[0][4]
         #sort transcript exons in ascending order
         transcript_exons = sorted(transcript_exons, key = itemgetter(int(0)))
-        if strand == "+":
+        if strand == '+':
             last_exon = transcript_exons[-1]
         else:
             last_exon = transcript_exons[0]

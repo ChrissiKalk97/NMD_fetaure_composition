@@ -60,7 +60,8 @@ def find_termination_codon(transcript_as_list: List[str], cds: List[List[str]]) 
                     #if cds ends with exon and there is a next exon, set stop position to first bp of next exon
                     stop_position = int(next_exon[0])
                 except IndexError:
-                    stop_position = cds_end-2
+                    #stop_position = cds_end-2
+                    stop_position = None
         else:
             exon_end_is_cds_end = [exon for exon in exons if str(cds_end) == exon[0]]
             if len(exon_end_is_cds_end) == 0:
@@ -77,7 +78,8 @@ def find_termination_codon(transcript_as_list: List[str], cds: List[List[str]]) 
                     #if cds ends with exon and there is a next exon, set stop position to first bp of next exon
                     stop_position = int(next_exon[1])
                 except IndexError:
-                    stop_position = cds_end+2
+                    #stop_position = cds_end+2
+                    stop_position = None
         return stop_position
     
 

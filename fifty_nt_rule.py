@@ -46,12 +46,13 @@ def main():
     if len(transcript_ids_wo_cds) > 0:
         print("known_tids_no_cds", len(transcript_ids_wo_cds))
         transcripts_with_CDS = determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, sys.argv[2], sys.argv[3], sys.argv[1])
-        print(transcripts_with_CDS.head())
+        print(transcripts_with_CDS.head(50))
 
         NMD_features_df = NMD_features_df.join(transcripts_with_CDS, how='outer')
         NMD_features_df['50_nt'] = np.where(NMD_features_df['50_nt'].isna(), NMD_features_df['50_nt_rule'], NMD_features_df['50_nt'])
         #NMD_features_df['50_nt'].fillna(NMD_features_df['50_nt_rule'])
         print(NMD_features_df.head())
+        print(NMD_features_df.tail())
     print(sum(NMD_features_df["50_nt"].notna()), sum(NMD_features_df["50_nt"][NMD_features_df["50_nt"].notna()]))
     NMD_features_df.to_csv(sys.argv[4])
     return  0
