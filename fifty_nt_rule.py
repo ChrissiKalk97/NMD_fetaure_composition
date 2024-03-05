@@ -34,7 +34,6 @@ def main():
         .select_by_key('feature', "CDS,exon,stop_codon")\
         .extract_data('transcript_id,start,end,exon_number,feature,strand,chrom,gene_id,score',
                        as_dict_of_merged_list=True)
-    del custom_gtf
     
     transcript_ids_wo_cds, NMD_features_df =\
     handle_cds_transcripts(transcript_gtftk_object, transcript_ids, NMD_features_df)
@@ -45,8 +44,8 @@ def main():
     #get fasta of transcripts with known id
     if len(transcript_ids_wo_cds) > 0:
         print("known_tids_no_cds", len(transcript_ids_wo_cds))
-        transcripts_with_CDS = determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, sys.argv[2], sys.argv[3], sys.argv[1])
-        print(transcripts_with_CDS.head(50))
+        transcripts_with_CDS = determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, sys.argv[2], sys.argv[3], custom_gtf)
+        #print(transcripts_with_CDS.head(50))
 
         NMD_features_df = NMD_features_df.join(transcripts_with_CDS, how='outer')
         NMD_features_df['50_nt'] = np.where(NMD_features_df['50_nt'].isna(), NMD_features_df['50_nt_rule'], NMD_features_df['50_nt'])
