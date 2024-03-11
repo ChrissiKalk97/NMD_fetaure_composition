@@ -186,7 +186,7 @@ def find_cds_orf(reference_gtf, orf_bed_positions):
     #target transcript needs to overlap with ORf for at least 5%
     summed_overlap = summed_overlap[summed_overlap['target_coverage_percentage'] >= 0.05]
     #overlap muss mindestens 20 AA = 60 bp sein
-    summed_overlap = summed_overlap[summed_overlap['overlap'] >= 60]
+    #summed_overlap = summed_overlap[summed_overlap['overlap'] >= 60]
     index_most_5 = summed_overlap.groupby('tid')['start_ORF'].idxmin()
     transcripts_with_CDS = summed_overlap.loc[index_most_5]
     return transcripts_with_CDS 

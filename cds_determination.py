@@ -3,10 +3,12 @@ import regex as re
 from pybedtools import BedTool
 import pybedtools as pb
 import pandas as pd
+from pygtftk.gtf_interface import GTF
+from Bio import SeqIO
 
 from helper_functions_cds_determination import get_fasta_tid, get_cds_genomic_coordinates,\
       get_pct_reference, find_cds_orf, get_length_last_exon,\
-      calculate_50nt_rule
+      calculate_50nt_rule, get_transcript_string
 from OrfFinder_py3 import OrfFinder
 
 def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, reference_file, reference_sequences_file, gtf_file):
@@ -18,6 +20,7 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, reference_file
     sequences = get_fasta_tid(transcripts_no_cds, genome_file)
     get_fasta = time.time() - start_time
     ORFs = OrfFinder(sequences)
+    SeqIO.write(ORFs, f'Output/ORFFinder.fasta', "fasta")
     #for orf in ORFs:
         #print(orf.id, orf.seq)
     getORFs = time.time() - start_time - get_fasta 
@@ -32,6 +35,11 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, reference_file
     reference_gtf_CDS = get_pct_reference(reference_file, gene_ids_ORF_transcripts)
     prepare_reference = time.time() - start_time - get_fasta - getORFs - genomic_time
 
+    reference_gtf = GTF(reference_file, check_ensembl_format=False)
+    gene_string = get_transcript_string(gene_ids_ORF_transcripts)    
+    reference_gtf_CDS = reference_gtf\
+    .select_by_key('gene_id', gene_string)\
+    .select_by_key('gene_biotype', 'protein_coding')
     
     transcripts_with_CDS  = find_cds_orf(reference_gtf_CDS, orf_bed_positions)
     t_find_cds_orf = time.time() - start_time - get_fasta - getORFs - genomic_time - prepare_reference
