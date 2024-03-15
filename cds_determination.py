@@ -35,15 +35,16 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds, reference_file
     reference_gtf_CDS = get_pct_reference(reference_file, gene_ids_ORF_transcripts)
     prepare_reference = time.time() - start_time - get_fasta - getORFs - genomic_time
 
-    reference_gtf = GTF(reference_file, check_ensembl_format=False)
-    gene_string = get_transcript_string(gene_ids_ORF_transcripts)    
-    reference_gtf_CDS = reference_gtf\
-    .select_by_key('gene_id', gene_string)\
-    .select_by_key('gene_biotype', 'protein_coding')
+    #reference_gtf = GTF(reference_file, check_ensembl_format=False)
+    #gene_string = get_transcript_string(gene_ids_ORF_transcripts)    
+    #reference_gtf_CDS = reference_gtf\
+    #.select_by_key('gene_id', gene_string)\
+    #.select_by_key('gene_biotype', 'protein_coding')
     
     transcripts_with_CDS  = find_cds_orf(reference_gtf_CDS, orf_bed_positions)
     t_find_cds_orf = time.time() - start_time - get_fasta - getORFs - genomic_time - prepare_reference
 
+    print("transcripts with their partners", transcripts_with_CDS.head())
     last_exon_length_dict = get_length_last_exon(transcripts_with_CDS['tid'].to_list(), gtf_file)
     #print(len(last_exon_length_dict) == len(transcripts_with_CDS.index))
     transcripts_with_CDS['last_exon_length'] = transcripts_with_CDS['tid'].map(last_exon_length_dict)

@@ -163,6 +163,12 @@ def find_cds_orf(reference_gtf, orf_bed_positions):
     summed_overlap = summed_overlap.groupby(['name', 'name_tar'])['overlap'].sum()
     summed_overlap = summed_overlap.reset_index()
     summed_overlap['tid'] = summed_overlap['name'].str.extract(r'[A-Z0-9\.]*:([A-Z0-9\.]*):.*')
+
+    #get gene ids of source and target, they need to be the same, otherwise the match is invalid
+    summed_overlap['gid'] = summed_overlap['name'].str.extract(r'([A-Z0-9\.]*):[A-Z0-9\.]*:.*')
+    summed_overlap['gid_target'] = summed_overlap['name_tar'].str.extract(r'([A-Z0-9\.]*):[A-Z0-9\.]*')
+    #summed_overlap = summed_overlap[summed_overlap['gid_target'] == summed_overlap['gid']]
+
     summed_overlap['ORF_nr'] = summed_overlap['name'].str.split(':').str[2]
     summed_overlap['start_ORF'] = summed_overlap['name'].str.split(':').str[3]
     summed_overlap['end_ORF'] = summed_overlap['name'].str.split(':').str[4]
@@ -196,6 +202,8 @@ def find_cds_orf(reference_gtf, orf_bed_positions):
 def get_length_last_exon(transcript_ids_list, gtf_file):
     '''extract last exon length per transcript from reference'''
     last_exon_length_by_transcript = {}
+    print(transcript_ids_list[0:5])
+    print(transcript_ids_list[-5:-1])
     transcript_string = get_transcript_string(transcript_ids_list)
     transcript_entries = gtf_file\
         .select_by_key('transcript_id', transcript_string)\
