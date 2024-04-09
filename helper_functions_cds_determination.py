@@ -155,7 +155,7 @@ def get_pct_reference(ref_name, gene_ids_ORF_transcripts):
 
 def longest_common_substring(source: str, target: str) -> str:
     """Computes the longest common substring of s1 and s2"""
-    seq_matcher = difflib.SequenceMatcher(isjunk=None, a=source, b=target)
+    seq_matcher = difflib.SequenceMatcher(isjunk=None, a=source, b=target, autojunk=False)
     match = seq_matcher.find_longest_match(0, len(source), 0, len(target))
 
     if match.size:
@@ -167,9 +167,22 @@ def longest_common_substring_percentage(source : str, target : str) -> float:
     """Computes the longest common substring percentage of s1 and s2"""
     assert min(len(source), len(target)) > 0, "One of the given string is empty"
     #get target exact match percentage
-    return len(longest_common_substring(source, target))/len(target)#divide common substring by target length
+    longest_match = longest_common_substring(source, target)
+    return (len(longest_match), \
+            len(longest_match)/len(source))#divide common substring by source length
     
-
+def select_row(group):
+        # Check if there's any entry above a certain value in the value_column
+        high_overlap = group[group['protein_overlap_perc'] > 0.1]
+        high_overlap = high_overlap[high_overlap['protein_overlap_aa'] >= 20]
+        if not high_overlap.empty:
+            high_overlap = high_overlap.sort_values(by = ['protein_overlap_aa'], ascending = [False])
+            return high_overlap.loc[high_overlap['start_ORF'].idxmin()] # returns lowest start posiiton, but if tie
+        #sorting according to protein overlap decides
+        else:
+            # If no entry above c, return the row with the minimum value in other_column
+            group = group.sort_values(by = ['protein_overlap_aa'], ascending = [False])
+            return group.loc[group['start_ORF'].idxmin()]
 
 def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
     '''Determines CDS for transcripts where only one ORF is considered, notes down ORFs where several
@@ -213,7 +226,7 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
 
     #print(summed_overlap['name_tar'], summed_overlap['target_coverage_percentage'])
     #target transcript needs to overlap with ORf for at least 5%
-    summed_overlap = summed_overlap[summed_overlap['target_coverage_percentage'] >= 0.05]
+    #summed_overlap = summed_overlap[summed_overlap['target_coverage_percentage'] >= 0.05]
     print('filtered for bp overlap, size of ORF_target-pairs to analyze:', len(summed_overlap.index))
     print('filtered for bp overlap, we have', len(summed_overlap['tid'].unique()), 'tids')
 
@@ -224,37 +237,26 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
 
     #in here NAs are introduced I think...
     summed_overlap['protein_overlap_perc'] = 0.0
+    summed_overlap['protein_overlap_aa'] = 0
     for row in summed_overlap.itertuples():
         source = summed_overlap['name'].at[row.Index]
         target = summed_overlap['name_tar'].at[row.Index]
-        #source = summed_overlap.iloc[index, 3]#name
-        #target = row['name_tar'].replace(":", "|")
-        #print('source', source)
-        #print('target', target)
-        #source_seq = {id:record for (id,record) in ORF_sequences.items() if id == source}
-        #target_seq = {id:record for (id,record) in target_sequences.items() if record.id == target}
-        #print('source_seq', source_seq)
-        #print('target_seq', target_seq)
-        #if len(target_seq) > 0 and len(source_seq) > 0 :
-        #source_seq = source_seq[source]
-        #target_seq = target_seq[target]
-        source_seq = ORF_sequences[source]
-        target_seq = target_sequences[target]
-        summed_overlap['protein_overlap_perc'].at[row.Index]\
-              = longest_common_substring_percentage(str(source_seq.seq), str(target_seq.seq))
-        #now_time = time.time() - start_time
-        #start_time = time.time()
-        #print("time for one exact matching iteration", now_time)
-    print('before filtering', print(len(summed_overlap.index)))
-    summed_overlap = summed_overlap[summed_overlap['protein_overlap_perc'] >= 0.05]
-    print('filtered for AA overlap', print(len(summed_overlap.index)))
-    print('filtered for AA overlap, we have', len(summed_overlap['tid'].unique()), 'tids')
+        if target != ".":
+            source_seq = ORF_sequences[source]
+            target_seq = target_sequences[target]
+            longest_common_substring = \
+                longest_common_substring_percentage(str(source_seq.seq), str(target_seq.seq))
+            summed_overlap['protein_overlap_perc'].at[row.Index]\
+                = longest_common_substring[1]
+            summed_overlap['protein_overlap_aa'].at[row.Index]\
+            =longest_common_substring[0]
+    
+    
 
-    #overlap muss mindestens 20 AA = 60 bp sein
-    #summed_overlap = summed_overlap[summed_overlap['overlap'] >= 60]
-    index_most_5 = summed_overlap.groupby('tid')['start_ORF'].idxmin()
-    transcripts_with_CDS = summed_overlap.loc[index_most_5]
-    print('selected most 5 ORF', print(len(transcripts_with_CDS.index)))
+    # Apply the custom function to each group and concatenate the results
+    transcripts_with_CDS = summed_overlap.groupby('tid').apply(select_row)
+    print(transcripts_with_CDS.head())
+
     return transcripts_with_CDS 
 
 
