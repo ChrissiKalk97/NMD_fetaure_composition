@@ -1,4 +1,3 @@
-import time
 import regex as re
 from operator import itemgetter
 from typing import Dict, List
@@ -51,7 +50,7 @@ def get_fasta_tid(transcripts_no_cds, genome_file, seq_type: str):
         description = 'chrom' + exon[5] + ':' + 'strand' + exon[4] + ':' + description[:-1]
         if exon[4] == '-':
             fasta_string = Seq(fasta_string).reverse_complement()
-        sequences.append(SeqRecord(id = transcript_id, seq = fasta_string, name = exon[6],\
+        sequences.append(SeqRecord(id = transcript_id, seq = Seq(fasta_string), name = exon[6],\
                                     description = description, annotations={'score': exon[7]}))#name is gene
     return sequences
     
@@ -180,13 +179,13 @@ def select_row(group):
             return high_overlap.loc[high_overlap['start_ORF'].idxmin()] # returns lowest start posiiton, but if tie
         #sorting according to protein overlap decides
         else:
-            # If no entry above c, return the row with the minimum value in other_column
+            # sort by AA overlap, such that if several ORFs start at the same position the longer one
+            #is chosen??? Should not happen...
             group = group.sort_values(by = ['protein_overlap_aa'], ascending = [False])
             return group.loc[group['start_ORF'].idxmin()]
 
 def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
-    '''Determines CDS for transcripts where only one ORF is considered, notes down ORFs where several
-    need to be considered, filters for transcripts without protein coding reference'''
+    ''''''
 
     reference_bed = BedTool(reference_gtf.to_bed(name=('gene_id', 'transcript_id'), sep='|')).saveas('pc_reference.bed')
     intersection = orf_bed_positions.intersect(reference_bed, wao = True, s = True).saveas('intersection.bed')
@@ -211,7 +210,7 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
 
     summed_overlap['start_ORF'] = summed_overlap['start_ORF'].astype(int)
     summed_overlap['end_ORF'] = summed_overlap['end_ORF'].astype(int)
-    summed_overlap = summed_overlap[summed_overlap['overlap'] != 0]
+    #summed_overlap = summed_overlap[summed_overlap['overlap'] != 0]
     #print(summed_overlap['name_tar'], summed_overlap['start_ORF'], summed_overlap['end_ORF'], summed_overlap['overlap'])
     
     #get length of target transcripts
@@ -224,18 +223,14 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
     summed_overlap['target_length'] = summed_overlap['name_tar'].map(target_length_dict)
     summed_overlap['target_coverage_percentage'] = summed_overlap['overlap']/summed_overlap['target_length']
 
-    #print(summed_overlap['name_tar'], summed_overlap['target_coverage_percentage'])
-    #target transcript needs to overlap with ORf for at least 5%
-    #summed_overlap = summed_overlap[summed_overlap['target_coverage_percentage'] >= 0.05]
+    
     print('filtered for bp overlap, size of ORF_target-pairs to analyze:', len(summed_overlap.index))
     print('filtered for bp overlap, we have', len(summed_overlap['tid'].unique()), 'tids')
 
-
-    #start_time = time.time()
     ORF_sequences = SeqIO.to_dict(SeqIO.parse(orf_file, "fasta"))
     target_sequences = SeqIO.to_dict(SeqIO.parse(transcript_file, "fasta"))
 
-    #in here NAs are introduced I think...
+    
     summed_overlap['protein_overlap_perc'] = 0.0
     summed_overlap['protein_overlap_aa'] = 0
     for row in summed_overlap.itertuples():
@@ -250,8 +245,6 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
                 = longest_common_substring[1]
             summed_overlap['protein_overlap_aa'].at[row.Index]\
             =longest_common_substring[0]
-    
-    
 
     # Apply the custom function to each group and concatenate the results
     transcripts_with_CDS = summed_overlap.groupby('tid').apply(select_row)

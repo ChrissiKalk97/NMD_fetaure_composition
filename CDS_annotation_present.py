@@ -26,5 +26,4 @@ def handle_cds_transcripts(transcript_gtftk_object, transcript_ids, NMD_features
         else: 
             NMD_features_df.loc[transcript_id,"has_cds"] = 0
             transcript_ids_wo_cds.append(transcript_id)
-    print("counter", counter)
     return transcript_ids_wo_cds, NMD_features_df
