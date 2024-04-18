@@ -255,7 +255,7 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
 
 
 def get_length_last_exon(transcript_ids_list, gtf_file):
-    '''extract last exon length per transcript from reference'''
+    '''extract last exon length per transcript from custom gtf'''
     last_exon_length_by_transcript = {}
     print(transcript_ids_list[0:5])
     print(transcript_ids_list[-5:-1])

@@ -30,7 +30,7 @@ def main():
     print('number of transcripts in custom gtf: ', len(transcript_ids))
 
     #build dataframe to store the computed features
-    NMD_features_df = pd.DataFrame(columns = ['50_nt', 'has_cds'],
+    NMD_features_df = pd.DataFrame(columns = ['50_nt', 'has_cds', 'last_exon_length',  't_length', 'start_ORF', 'end_ORF'],
                                     index = transcript_ids)
 
     #get exons, CDS and stop codons from the gtf object as dict
@@ -43,7 +43,8 @@ def main():
     #not down transcript ids for which no CDS anno found
     transcript_ids_wo_cds, NMD_features_df =\
     handle_cds_transcripts(transcript_gtftk_object, transcript_ids, NMD_features_df)
-    
+    print()
+
     start_no_cds = time.time() - start_time
     print('Time for start and handling cds annotated transcripts', start_no_cds)
 
@@ -59,15 +60,21 @@ def main():
                 sys.argv[2], sys.argv[3], sys.argv[1].split('/')[-1][:-4])
         
         #get the length of the last exon per transcript for 50 nt rule (from the custom gtf)
-        last_exon_length_dict = get_length_last_exon(transcripts_calculated_CDS['tid'].to_list(), custom_gtf,)
+        last_exon_length_dict = get_length_last_exon(transcripts_calculated_CDS['tid'].to_list(), custom_gtf)
         transcripts_calculated_CDS['last_exon_length'] = transcripts_calculated_CDS['tid'].map(last_exon_length_dict)
         
         #apply 50nt rule
         transcripts_calculated_CDS = calculate_50nt_rule(transcripts_calculated_CDS, sequences)
     
+    
+        # Display the columns present in each DataFrame
+        print("Columns in NMD_features_df:", NMD_features_df.columns)
+        print("Columns in transcripts_calculated_CDS:", transcripts_calculated_CDS.columns)
 
         #join with df for the CDS annotated transcripts
-        NMD_features_df = NMD_features_df.join(transcripts_calculated_CDS, how='outer')
+        NMD_features_df =pd.concat([transcripts_calculated_CDS, NMD_features_df], axis=0, join='outer')
+        #NMD_features_df = NMD_features_df.merge(transcripts_calculated_CDS, how='outer', on =['last_exon_length', 'start_ORF',\
+         #                                                        'end_ORF', 't_length', 'has_cds', '50_nt'])#, 
         NMD_features_df['50_nt'] = np.where(NMD_features_df['50_nt'].isna(),\
                                  NMD_features_df['50_nt_rule'], NMD_features_df['50_nt'])
         NMD_features_df.drop(['50_nt_rule'], axis = 1, inplace = True)
