@@ -97,19 +97,20 @@ def compose_transcript(transcript_as_list, stop_position):
     transcript_coordinates = {'length': 0, 'exon_jc': {}, 'stop_position': 0}
     last_exon = 0
     if strand == '+':
-        exons = sorted(exons, key = itemgetter(int(0)))#sort list according to start positions of exons
+        exons.sort(key=lambda elem: int(elem[0]))#sort list according to start positions of exons
     else:
-        exons = sorted(exons, key = itemgetter(int(0)), reverse = True)
+        exons.sort(key=lambda elem: int(elem[0]), reverse = True)
+    exon_index = 0
     for exon in exons:
         exon_num = exon[2]
-        
         if strand == '+':
             five_prime = int(exon[0])
             three_prime = int(exon[1])
-            length = three_prime - five_prime
+            length = three_prime - five_prime +1
             #if the stop position is inside this exon: calculate the stop position in transcript coordinates, length plus distance from stop to 5' end of exon
             if stop_position >= five_prime and stop_position <= three_prime:
                 transcript_coordinates['stop_position'] = transcript_coordinates['length'] + stop_position - five_prime# this only works for correctly numbered exons
+                exon_containing_stop = exon_index
             transcript_coordinates['length']+= length#add length of exon to total length of the transcript
             transcript_coordinates['exon_jc'][exon_num] = length#note down the length of the transcript including current exon = EJC position
             if last_exon < int(exon_num):
@@ -121,22 +122,27 @@ def compose_transcript(transcript_as_list, stop_position):
             #for the negative strand the ordering is adjusted such that the first exon is the on with
             #the largest genoic +-strand cooridnates
             #the five prime end is bigger than the 3 prime end (as this is in respect to the negative strand)
-            length = five_prime - three_prime
+            #plus 1 because the las coordinate is also part of the exon
+            length = five_prime - three_prime + 1
             if stop_position <= five_prime and stop_position >= three_prime:
                 #as cooridnates for stop and five_prime are on +strand but we are calculating on the -strand
                 #distance from current (minus strand) five prime to PTC, is equivaluent to 5#-stopp_position in +strand coordinates
                 transcript_coordinates['stop_position'] =  transcript_coordinates['length'] - stop_position + five_prime
+                exon_containing_stop = exon_index
             transcript_coordinates['length']+= length
             transcript_coordinates['exon_jc'][exon_num] = length
             if last_exon < int(exon_num):
                 last_exon = int(exon_num)
+        exon_index += 1
         
     
     trans_coord_last_ejc = transcript_coordinates['length'] - transcript_coordinates['exon_jc'][str(last_exon)]
+
+    exon_containing_stop_length = int(exons[exon_containing_stop][1]) - int(exons[exon_containing_stop][0])
     if transcript_coordinates['stop_position'] == 0:
         print('start')
         print(strand, stop_position)
         print(exons)
         print(transcript_as_list)
         print('end')
-    return transcript_coordinates, trans_coord_last_ejc
+    return transcript_coordinates, trans_coord_last_ejc, exon_containing_stop_length

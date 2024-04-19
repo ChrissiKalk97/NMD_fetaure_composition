@@ -30,7 +30,7 @@ def main():
     print('number of transcripts in custom gtf: ', len(transcript_ids))
 
     #build dataframe to store the computed features
-    NMD_features_df = pd.DataFrame(columns = ['50_nt', 'has_cds', 'last_exon_length',  't_length', 'start_ORF', 'end_ORF'],
+    NMD_features_df = pd.DataFrame(columns = ['50_nt', 'has_cds', 'last_exon_length',  't_length', 'start_ORF', 'end_ORF', 'exon_with_stop_length'],
                                     index = transcript_ids)
 
     #get exons, CDS and stop codons from the gtf object as dict
