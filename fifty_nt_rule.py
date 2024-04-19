@@ -78,7 +78,9 @@ def main():
         NMD_features_df['50_nt'] = np.where(NMD_features_df['50_nt'].isna(),\
                                  NMD_features_df['50_nt_rule'], NMD_features_df['50_nt'])
         NMD_features_df.drop(['50_nt_rule'], axis = 1, inplace = True)
-        
+    
+    NMD_features_df['3_UTR_length'] = NMD_features_df['t_length']-NMD_features_df['end_ORF']
+    NMD_features_df['5_UTR_length'] = NMD_features_df['start_ORF']
     
     print(NMD_features_df.head())
     print(NMD_features_df.tail())
