@@ -81,6 +81,8 @@ def main():
     
     NMD_features_df['3_UTR_length'] = NMD_features_df['t_length']-NMD_features_df['end_ORF']
     NMD_features_df['5_UTR_length'] = NMD_features_df['start_ORF']
+    NMD_features_df['distance_stop_from_start'] = NMD_features_df['end_ORF'] - NMD_features_df['start_ORF']
+    NMD_features_df['stop_150bp_from_start'] = np.where(NMD_features_df['distance_stop_from_start'] > 150, 0, 1)
     
     print(NMD_features_df.head())
     print(NMD_features_df.tail())
