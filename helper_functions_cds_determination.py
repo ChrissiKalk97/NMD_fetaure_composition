@@ -61,8 +61,10 @@ def get_cds_genomic_coordinates(orf_sequences):
     constituting the ORF are listed'''
     bed_string = ''
     transcripts = []
+    orf_dict_exon_with_stop_length = {}
     for orf in orf_sequences:
-        transcripts.append(orf.id.split(':')[0])
+        tid = orf.id.split(':')[0]
+        transcripts.append(tid)
         name = orf.name + '|' + orf.id
         orf_start = int(orf.id.split(':')[2])
         orf_end = int(orf.id.split(':')[3])
@@ -91,6 +93,8 @@ def get_cds_genomic_coordinates(orf_sequences):
                                   + orf.annotations['score'] + '\t' + strand + '\n'
                         orf_end = 0
                 counter += 1
+                #the last exon encountered has the stop codon, note down exon length
+                orf_dict_exon_with_stop_length[orf.name + '|' + orf.id] = exon_end - exon_start +1
         else:
             counter = len(transcript_info) - 1
             while orf_end > 0:
@@ -111,6 +115,8 @@ def get_cds_genomic_coordinates(orf_sequences):
                                   orf.annotations['score'] + '\t' + strand + '\n'
                         orf_end = 0
                 counter -= 1
+                #the last exon encountered has the stop codon, note down exon length
+                orf_dict_exon_with_stop_length[orf.name + '|' + orf.id] = exon_end - exon_start +1
                 
     try:
         bed_string = bed_string[:-1]
@@ -123,7 +129,7 @@ def get_cds_genomic_coordinates(orf_sequences):
 
         genomic_coordinates = pybedtools.BedTool(bed_string, from_string=True)\
             .saveas('genomic_coordinates_ORFs.bed')
-        return genomic_coordinates
+        return genomic_coordinates, orf_dict_exon_with_stop_length
     except Exception as e:
         print(e)
         for line in bed_string.split('\n'):
@@ -223,9 +229,6 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
     summed_overlap['target_length'] = summed_overlap['name_tar'].map(target_length_dict)
     summed_overlap['target_coverage_percentage'] = summed_overlap['overlap']/summed_overlap['target_length']
 
-    
-    print('filtered for bp overlap, size of ORF_target-pairs to analyze:', len(summed_overlap.index))
-    print('filtered for bp overlap, we have', len(summed_overlap['tid'].unique()), 'tids')
 
     ORF_sequences = SeqIO.to_dict(SeqIO.parse(orf_file, "fasta"))
     target_sequences = SeqIO.to_dict(SeqIO.parse(transcript_file, "fasta"))
@@ -248,7 +251,6 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
 
     # Apply the custom function to each group and concatenate the results
     transcripts_with_CDS = summed_overlap.groupby('tid').apply(select_row)
-    print(transcripts_with_CDS.head())
 
     return transcripts_with_CDS 
 
@@ -257,8 +259,6 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
 def get_length_last_exon(transcript_ids_list, gtf_file):
     '''extract last exon length per transcript from custom gtf'''
     last_exon_length_by_transcript = {}
-    print(transcript_ids_list[0:5])
-    print(transcript_ids_list[-5:-1])
     transcript_string = get_transcript_string(transcript_ids_list)
     transcript_entries = gtf_file\
         .select_by_key('transcript_id', transcript_string)\

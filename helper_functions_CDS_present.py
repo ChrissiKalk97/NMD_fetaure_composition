@@ -138,7 +138,7 @@ def compose_transcript(transcript_as_list, stop_position):
     
     trans_coord_last_ejc = transcript_coordinates['length'] - transcript_coordinates['exon_jc'][str(last_exon)]
 
-    exon_containing_stop_length = int(exons[exon_containing_stop][1]) - int(exons[exon_containing_stop][0])
+    exon_containing_stop_length = int(exons[exon_containing_stop][1]) - int(exons[exon_containing_stop][0]) +1
     if transcript_coordinates['stop_position'] == 0:
         print('start')
         print(strand, stop_position)

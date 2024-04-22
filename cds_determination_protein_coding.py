@@ -72,7 +72,7 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,\
     ORFs = [ORF for ORF in ORFs if ORF.name in protein_coding_genes]
     
     #get cds coordinates genomic
-    orf_bed_positions = get_cds_genomic_coordinates(ORFs)
+    orf_bed_positions, orf_dict_exon_with_stop_length = get_cds_genomic_coordinates(ORFs)
      
     target_sequences = get_fasta_tid(reference_tragets, genome_file, seq_type = 'CDS')
     target_sequences = [SeqRecord(id = str(target.name) + '|' + str(target.id),\
@@ -87,6 +87,13 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,\
         prepare_ref_time -filtering_pc_writing - genomic_and_ref_seq
     print("Time needed to find the CDS: ", t_find_cds_orf)
     pb.cleanup(remove_all=True)
+
+
+    print(orf_dict_exon_with_stop_length)
+    #map the exon length of the exon with stop to the table
+    transcripts_with_CDS['exon_with_stop_length'] =\
+        transcripts_with_CDS['name'].map(orf_dict_exon_with_stop_length)
+
 
     return transcripts_with_CDS, sequences
 
