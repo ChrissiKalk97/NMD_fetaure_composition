@@ -18,6 +18,8 @@ from pygtftk.gtf_interface import GTF
 from CDS_annotation_present import handle_cds_transcripts
 from cds_determination_protein_coding import determine_cds
 from apply_50nt import get_length_last_exon, calculate_50nt_rule
+from helper_functions_cds_determination import get_fasta_tid
+from calculate_sequence_features import get_stop_codon_identity
 
 def main():
     start_time = time.time()
@@ -30,7 +32,10 @@ def main():
     print('number of transcripts in custom gtf: ', len(transcript_ids))
 
     #build dataframe to store the computed features
-    NMD_features_df = pd.DataFrame(columns = ['50_nt', 'has_cds', 'last_exon_length',  't_length', 'start_ORF', 'end_ORF', 'exon_with_stop_length'],
+    NMD_features_df = pd.DataFrame(columns = ['50_nt', 'has_cds', 'last_exon_length',
+                                                't_length', 'start_ORF', 'end_ORF', 
+                                                'exon_with_stop_length',
+                                                'stop_TGA', 'stop_TAA'], #stop being TAG is if both others are 0
                                     index = transcript_ids)
 
     #get exons, CDS and stop codons from the gtf object as dict
@@ -43,7 +48,13 @@ def main():
     #not down transcript ids for which no CDS anno found
     transcript_ids_wo_cds, NMD_features_df =\
     handle_cds_transcripts(transcript_gtftk_object, transcript_ids, NMD_features_df)
-    print()
+    
+    #get transcript and ORF sequences for the transcripts with CDS
+    tids_with_cds = [tid for tid in transcript_ids if tid not in transcript_ids_wo_cds]
+    transcripts_with_cds = {k: transcript_gtftk_object[k] for k in transcript_gtftk_object.keys()\
+                               if k in tids_with_cds}
+    transcript_seqs = get_fasta_tid(transcripts_with_cds, sys.argv[3], seq_type = 'exon')
+    CDS_seqs = get_fasta_tid(transcripts_with_cds, sys.argv[3], seq_type = 'CDS')
 
     start_no_cds = time.time() - start_time
     print('Time for start and handling cds annotated transcripts', start_no_cds)
@@ -56,7 +67,7 @@ def main():
                len(transcript_ids_wo_cds))
         
         #determine CDS for source transcripts
-        transcripts_calculated_CDS, sequences = determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,\
+        transcripts_calculated_CDS, sequences, ORFs = determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,\
                 sys.argv[2], sys.argv[3], sys.argv[1].split('/')[-1][:-4])
         
         #get the length of the last exon per transcript for 50 nt rule (from the custom gtf)
@@ -68,24 +79,29 @@ def main():
     
     
         # Display the columns present in each DataFrame
-        print("Columns in NMD_features_df:", NMD_features_df.columns)
-        print("Columns in transcripts_calculated_CDS:", transcripts_calculated_CDS.columns)
+        #print("Columns in NMD_features_df:", NMD_features_df.columns)
+        #print("Columns in transcripts_calculated_CDS:", transcripts_calculated_CDS.columns)
 
         #join with df for the CDS annotated transcripts
         NMD_features_df =pd.concat([transcripts_calculated_CDS, NMD_features_df], axis=0, join='outer')
-        #NMD_features_df = NMD_features_df.merge(transcripts_calculated_CDS, how='outer', on =['last_exon_length', 'start_ORF',\
-         #                                                        'end_ORF', 't_length', 'has_cds', '50_nt'])#, 
         NMD_features_df['50_nt'] = np.where(NMD_features_df['50_nt'].isna(),\
                                  NMD_features_df['50_nt_rule'], NMD_features_df['50_nt'])
         NMD_features_df.drop(['50_nt_rule'], axis = 1, inplace = True)
-    
+
+        #prepare ORF sequences for feature extraction
+        NMD_features_df['ORF_id'] = NMD_features_df['name'].str.split('|').str[1]
+        NMD_features_df['ORF_id'] = NMD_features_df['ORF_id'].astype('string')
+        ORFs = [ORF for ORF in ORFs if ORF.id in NMD_features_df['ORF_id'].values]
+        CDS_seqs = CDS_seqs + ORFs
+
+    #calculate features used for the NMD classifier
+    NMD_features_df = get_stop_codon_identity(CDS_seqs, NMD_features_df)
     NMD_features_df['3_UTR_length'] = NMD_features_df['t_length']-NMD_features_df['end_ORF']
     NMD_features_df['5_UTR_length'] = NMD_features_df['start_ORF']
     NMD_features_df['distance_stop_from_start'] = NMD_features_df['end_ORF'] - NMD_features_df['start_ORF']
     NMD_features_df['stop_150bp_from_start'] = np.where(NMD_features_df['distance_stop_from_start'] > 150, 0, 1)
     
     print(NMD_features_df.head())
-    print(NMD_features_df.tail())
     print('number of transcripts for which 50 nt rule was calculated: ', sum(NMD_features_df['50_nt'].notna()))
     print('number of transcripts found to be NMD sensitive (no escape) by 50nt rule ', \
           sum(NMD_features_df['50_nt'][NMD_features_df['50_nt'].notna()]))

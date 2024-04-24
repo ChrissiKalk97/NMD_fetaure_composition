@@ -22,14 +22,14 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,\
 
     start_time = time.time()
     sequences = get_fasta_tid(transcripts_no_cds, genome_file, seq_type = 'exon')
-    SeqIO.write(sequences, f'Output/{output_name}_sequences_transcripts_provided_integer.fasta', 'fasta')
+    SeqIO.write(sequences, f'Output/{output_name}_sequences_transcripts_provided.fasta', 'fasta')
     get_fasta = time.time() - start_time
     print("Time to get fasta seqs custom transcripts: ", get_fasta)
 
     ORFs = OrfFinder(sequences)
     ORFs_for_fasta = [SeqRecord(id = str(orf.name) + '|' + str(orf.id),\
                                    seq = orf.seq.translate(), description = '') for orf in ORFs]
-    SeqIO.write(ORFs_for_fasta, f'Output/{output_name}_ORFFinder_integer.fasta', 'fasta')
+    SeqIO.write(ORFs_for_fasta, f'Output/{output_name}_ORFFinder.fasta', 'fasta')
     get_write_ORFs = time.time() - start_time - get_fasta
     print("Time to get and write ORFs to fasta:", get_write_ORFs)
 
@@ -77,24 +77,22 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,\
     target_sequences = get_fasta_tid(reference_tragets, genome_file, seq_type = 'CDS')
     target_sequences = [SeqRecord(id = str(target.name) + '|' + str(target.id),\
                                    seq = target.seq.translate(), description = '') for target in target_sequences]
-    SeqIO.write(target_sequences, f'Output/{output_name}_target_sequences_integer.fasta', 'fasta')
+    SeqIO.write(target_sequences, f'Output/{output_name}_target_sequences.fasta', 'fasta')
     genomic_and_ref_seq = time.time() - start_time - get_fasta - get_write_ORFs -prepare_ref_time -filtering_pc_writing
     print("Time for genomic coordinates and protein sequence of possible target CDS", genomic_and_ref_seq)
     
     transcripts_with_CDS  = find_cds_orf(reference_gtf_CDS, orf_bed_positions,\
-         f'Output/{output_name}_ORFFinder_integer.fasta', f'Output/{output_name}_target_sequences_integer.fasta')
+         f'Output/{output_name}_ORFFinder.fasta', f'Output/{output_name}_target_sequences.fasta')
     t_find_cds_orf =  time.time() - start_time - get_fasta - get_write_ORFs -\
         prepare_ref_time -filtering_pc_writing - genomic_and_ref_seq
     print("Time needed to find the CDS: ", t_find_cds_orf)
     pb.cleanup(remove_all=True)
 
-
-    print(orf_dict_exon_with_stop_length)
     #map the exon length of the exon with stop to the table
     transcripts_with_CDS['exon_with_stop_length'] =\
         transcripts_with_CDS['name'].map(orf_dict_exon_with_stop_length)
 
 
-    return transcripts_with_CDS, sequences
+    return transcripts_with_CDS, sequences, ORFs
 
     

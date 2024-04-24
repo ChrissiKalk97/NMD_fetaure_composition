@@ -201,14 +201,12 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
     summed_overlap = summed_overlap.groupby(['name', 'name_tar'])['overlap'].sum()
     summed_overlap = summed_overlap.reset_index()
     summed_overlap['tid'] = summed_overlap['name'].str.extract(r'[A-Z0-9\.]*\|([A-Z0-9\.]*):.*')
-    #summed_overlap['orf_header'] =  summed_overlap['name'].str.extract(r'([A-Z0-9\.]*:[A-Z0-9\.]*):.*')
 
     print('before any filtering we have', len(summed_overlap['tid'].unique()), 'tids')
 
     #get gene ids of source and target, they need to be the same, otherwise the match is invalid
     summed_overlap['gid'] = summed_overlap['name'].str.extract(r'([A-Z0-9\.]*)\|[A-Z0-9\.]*:.*')
     summed_overlap['gid_target'] = summed_overlap['name_tar'].str.extract(r'([A-Z0-9\.]*)\|[A-Z0-9\.]*')
-    #summed_overlap = summed_overlap[summed_overlap['gid_target'] == summed_overlap['gid']]
 
     summed_overlap['ORF_nr'] = summed_overlap['name'].str.split(':').str[1]
     summed_overlap['start_ORF'] = summed_overlap['name'].str.split(':').str[2]
@@ -216,8 +214,6 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
 
     summed_overlap['start_ORF'] = summed_overlap['start_ORF'].astype(int)
     summed_overlap['end_ORF'] = summed_overlap['end_ORF'].astype(int)
-    #summed_overlap = summed_overlap[summed_overlap['overlap'] != 0]
-    #print(summed_overlap['name_tar'], summed_overlap['start_ORF'], summed_overlap['end_ORF'], summed_overlap['overlap'])
     
     #get length of target transcripts
     target_length_dict = {}
