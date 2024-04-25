@@ -19,7 +19,8 @@ from CDS_annotation_present import handle_cds_transcripts
 from cds_determination_protein_coding import determine_cds
 from apply_50nt import get_length_last_exon, calculate_50nt_rule
 from helper_functions_cds_determination import get_fasta_tid
-from calculate_sequence_features import get_stop_codon_identity, get_base_after_stop
+from calculate_sequence_features import get_stop_codon_identity, get_base_after_stop,\
+get_GC_content_in30bp_ribo_window
 
 def main():
     start_time = time.time()
@@ -100,9 +101,10 @@ def main():
     NMD_features_df = get_stop_codon_identity(CDS_seqs, NMD_features_df)
     NMD_features_df['3_UTR_length'] = NMD_features_df['t_length']-NMD_features_df['end_ORF']
     NMD_features_df['5_UTR_length'] = NMD_features_df['start_ORF']
-    NMD_features_df['distance_stop_from_start'] = NMD_features_df['end_ORF'] - NMD_features_df['start_ORF']
+    NMD_features_df['distance_stop_from_start'] = NMD_features_df['end_ORF'] - NMD_features_df['start_ORF'] - 2
     NMD_features_df['stop_150bp_from_start'] = np.where(NMD_features_df['distance_stop_from_start'] > 150, 0, 1)
     NMD_features_df = get_base_after_stop(transcript_seqs, NMD_features_df)
+    NMD_features_df = get_GC_content_in30bp_ribo_window(transcript_seqs, NMD_features_df)
     
     print(NMD_features_df.head())
     print('number of transcripts for which 50 nt rule was calculated: ', sum(NMD_features_df['50_nt'].notna()))
