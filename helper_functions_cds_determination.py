@@ -24,7 +24,7 @@ def get_transcript_string(transcript_ids: List[str]) -> str:
 
 
 
-def get_fasta_tid(transcripts_no_cds, genome_file, seq_type: str):
+def get_fasta_tid(transcripts_no_cds, genome_file, seq_type: str, plus_stop = False):
     '''creates the fasta sequence of a transcript from its exon coordinates 
     of the gtf file '''
     genome_dict = SeqIO.index(genome_file, 'fasta')
@@ -35,13 +35,15 @@ def get_fasta_tid(transcripts_no_cds, genome_file, seq_type: str):
         transcript_info = [transcript_info[x:x+8] for x in range(0, len(transcript_info), 8)]
         transcript_exons = [sub_list for sub_list in transcript_info if seq_type in sub_list]
         #sort list according to start positions of exons
-        #transcript_exons.sort(key=lambda elem: elem[0])
         transcript_exons.sort(key=lambda elem: int(elem[0]))
-        for exon in transcript_exons:
-            #build the transcript sequence from the exons in 5' to 3' order (+-strand), exon by exon
-            fasta_string += genome_dict[exon[5]].seq[int(exon[0])-1:int(exon[1])]#get sequence of the exon by 
-            #-1: 1-based system as in Ensembl, but string indexing is 0-based
-            #might need to provide this to be changed, if assemblies have used different annotations, e.g. NCBI
+        for idx, exon in enumerate(transcript_exons):
+            if plus_stop == True and idx == len(transcript_exons) -1:
+                fasta_string += genome_dict[exon[5]].seq[int(exon[0])-1:int(exon[1])+3]
+            else:
+                #build the transcript sequence from the exons in 5' to 3' order (+-strand), exon by exon
+                fasta_string += genome_dict[exon[5]].seq[int(exon[0])-1:int(exon[1])]#get sequence of the exon by 
+                #-1: 1-based system as in Ensembl, but string indexing is 0-based
+                #might need to provide this to be changed, if assemblies have used different annotations, e.g. NCBI
 
             #subsetting the chromosome at the respecitve start and stop positions
             #add exon number and genomic start end to the description
@@ -213,7 +215,8 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
     summed_overlap['end_ORF'] = summed_overlap['name'].str.split(':').str[3]
 
     summed_overlap['start_ORF'] = summed_overlap['start_ORF'].astype(int)
-    summed_overlap['end_ORF'] = summed_overlap['end_ORF'].astype(int)
+    #end ORF is the first position of the stop codon
+    summed_overlap['end_ORF'] = summed_overlap['end_ORF'].astype(int) - 2
     
     #get length of target transcripts
     target_length_dict = {}

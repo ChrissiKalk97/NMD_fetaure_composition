@@ -54,9 +54,9 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,\
     protein_coding_genes = set(protein_coding_genes)
 
     #transcript sequences w/o ORFs:
-    transcripts_with_ORFs = [trans.id for trans in ORFs_for_fasta]
-    transcripts_no_orfs = [trans for trans in sequences if trans.id not in transcripts_with_ORFs]
-    SeqIO.write(transcripts_no_orfs, f'Output/{output_name}_transcripts_w_o_ORFs_Ensmebl.fasta', 'fasta')
+    #transcripts_with_ORFs = [trans.id for trans in ORFs_for_fasta]
+    #transcripts_no_orfs = [trans for trans in sequences if trans.id not in transcripts_with_ORFs]
+    #SeqIO.write(transcripts_no_orfs, f'Output/{output_name}_transcripts_w_o_ORFs_Ensmebl.fasta', 'fasta')
 
     #ORF seqeunces in DNA
     ORFs_for_fasta = [SeqRecord(id = str(orf.name) + '|' + str(orf.id),\

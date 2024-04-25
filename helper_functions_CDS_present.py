@@ -109,7 +109,7 @@ def compose_transcript(transcript_as_list, stop_position):
             length = three_prime - five_prime +1
             #if the stop position is inside this exon: calculate the stop position in transcript coordinates, length plus distance from stop to 5' end of exon
             if stop_position >= five_prime and stop_position <= three_prime:
-                transcript_coordinates['stop_position'] = transcript_coordinates['length'] + stop_position - five_prime# this only works for correctly numbered exons
+                transcript_coordinates['stop_position'] = transcript_coordinates['length'] + stop_position - five_prime
                 exon_containing_stop = exon_index
             transcript_coordinates['length']+= length#add length of exon to total length of the transcript
             transcript_coordinates['exon_jc'][exon_num] = length#note down the length of the transcript including current exon = EJC position
