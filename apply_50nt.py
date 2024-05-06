@@ -10,8 +10,6 @@ from helper_functions_cds_determination import get_transcript_string
 def get_length_last_exon(transcript_ids_list, gtf_file):
     '''extract last exon length per transcript from reference'''
     last_exon_length_by_transcript = {}
-    print(transcript_ids_list[0:5])
-    print(transcript_ids_list[-5:-1])
     transcript_string = get_transcript_string(transcript_ids_list)
     transcript_entries = gtf_file\
         .select_by_key('transcript_id', transcript_string)\
@@ -28,8 +26,10 @@ def get_length_last_exon(transcript_ids_list, gtf_file):
             last_exon = transcript_exons[-1]
         else:
             last_exon = transcript_exons[0]
-        last_exon_length_by_transcript[transcript_id] = int(last_exon[1]) - int(last_exon[0])
+        last_exon_length_by_transcript[transcript_id] = int(last_exon[1]) - int(last_exon[0]) + 1
     return last_exon_length_by_transcript
+
+
 
 def calculate_50nt_rule(transcripts_with_CDS: pd.DataFrame, sequences) -> pd.DataFrame:
     t_length_dict = {}

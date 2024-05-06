@@ -23,15 +23,15 @@ def handle_cds_transcripts(transcript_gtftk_object, transcript_ids, NMD_features
                 
             else:
                 NMD_features_df.loc[transcript_id, '50_nt'] = 0
-            NMD_features_df.loc[transcript_id, 'last_exon_length'] = last_ejc
+            NMD_features_df.loc[transcript_id, 'last_exon_length'] = stop_pos_transcript['length'] - last_ejc
             NMD_features_df.loc[transcript_id, 'end_ORF'] = stop_pos_transcript['stop_position']
-            NMD_features_df.loc[transcript_id, 'distance_stop_EJC'] = NMD_features_df.loc[transcript_id, 'last_exon_length'] -\
-            NMD_features_df.loc[transcript_id, 'end_ORF']
+            NMD_features_df.loc[transcript_id, 'distance_stop_EJC'] = stop_pos_transcript['length'] -\
+                NMD_features_df.loc[transcript_id, 'last_exon_length'] -\
+                NMD_features_df.loc[transcript_id, 'end_ORF']
             NMD_features_df.loc[transcript_id, 't_length'] = stop_pos_transcript['length']
             NMD_features_df.loc[transcript_id, 'start_ORF'] = stop_pos_transcript['stop_position'] - cds_length
             NMD_features_df.loc[transcript_id, 'exon_with_stop_length'] = exon_containing_stop_length
         else: 
-            NMD_features_df.loc[transcript_id,'has_cds'] = 0
             transcript_ids_wo_cds.append(transcript_id)
     NMD_features_df.drop(transcript_ids_wo_cds, inplace = True)
     return transcript_ids_wo_cds, NMD_features_df

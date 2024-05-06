@@ -23,14 +23,14 @@ def get_cds_end(cds : List[List[str]], strand : str)-> int:
             if stop_position_plus < three_prime:
                 stop_position_plus = three_prime
                 cds_end = three_prime
-                cds_length += three_prime - five_prime
+                cds_length += three_prime - five_prime + 1
         else:
             three_prime = int(partial_cds[0])
             five_prime = int(partial_cds[1])
             if stop_position_minus > three_prime:
                 stop_position_minus = three_prime
                 cds_end = three_prime
-                cds_length += five_prime - three_prime
+                cds_length += five_prime - three_prime + 1
     return cds_end, cds_length
                 
  
@@ -41,7 +41,8 @@ def find_termination_codon(transcript_as_list: List[str], cds: List[List[str]]) 
     #if stop codon annotated: return its first base position
     stop_position = check_stop_codon(transcript_as_list, strand)
     if stop_position is not None:
-        return stop_position
+        cds_end, cds_length = get_cds_end(cds, strand)
+        return stop_position, cds_length
     
     #if stop codon not annotated, compose CDS and extract end poisition of CDS
     else:
