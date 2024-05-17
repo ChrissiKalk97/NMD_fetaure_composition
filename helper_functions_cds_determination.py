@@ -214,7 +214,7 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
     summed_overlap['ORF_nr'] = summed_overlap['name'].str.split(':').str[1]
     summed_overlap['start_ORF'] = summed_overlap['name'].str.split(':').str[2]
     summed_overlap['end_ORF'] = summed_overlap['name'].str.split(':').str[3]
-
+    
     summed_overlap['start_ORF'] = summed_overlap['start_ORF'].astype(int)
     #end ORF is the first position of the stop codon
     summed_overlap['end_ORF'] = summed_overlap['end_ORF'].astype(int) - 2
@@ -228,7 +228,7 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
             target_length_dict[interval.name] = interval.stop - interval.start
     summed_overlap['target_length'] = summed_overlap['name_tar'].map(target_length_dict)
     summed_overlap['target_coverage_percentage'] = summed_overlap['overlap']/summed_overlap['target_length']
-
+    
 
     ORF_sequences = SeqIO.to_dict(SeqIO.parse(orf_file, "fasta"))
     target_sequences = SeqIO.to_dict(SeqIO.parse(transcript_file, "fasta"))
@@ -252,6 +252,7 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
     # Apply the custom function to each group and concatenate the results
     transcripts_with_CDS = summed_overlap.groupby('tid').apply(select_row)
 
+    
     return transcripts_with_CDS 
 
 

@@ -2,9 +2,13 @@ import regex as re
 import pandas as pd
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
+import itertools
 
 
 def get_stop_codon_identity(CDS_seqs, NMD_features_df):
+    """code the stop codon identity as boolean :'stop_TGA' or 
+    'stop_TAA' or if none of the two it is TAG """
+
     NMD_features_df['stop_TGA'] = 0
     NMD_features_df['stop_TAA'] = 0
     for seq in CDS_seqs:
@@ -14,9 +18,11 @@ def get_stop_codon_identity(CDS_seqs, NMD_features_df):
             NMD_features_df.loc[seq.id.split(':')[0], 'stop_TAA'] = 1
     return NMD_features_df
 
+
+
 def get_base_after_stop(transcript_sequences, NMD_features_df):
-    #NMD_features_df['start_ORF'] and NMD_features_df['end_ORF']
-    #will give the CDS coordinates
+    """code the identity of the base after the stop codon """
+
     NMD_features_df['4th_stop_C'] = 0
     NMD_features_df['4th_stop_G'] = 0
     NMD_features_df['4th_stop_T'] = 0
@@ -36,7 +42,11 @@ def get_base_after_stop(transcript_sequences, NMD_features_df):
             NMD_features_df.loc[seq.id.split(':')[0], '4th_stop_T'] = pd.NA
     return NMD_features_df
 
+
+
 def get_GC_content_in30bp_ribo_window(transcript_sequences, NMD_features_df):
+    """calculate the GC content in a window of 30bp centered around the stop codon"""
+
     NMD_features_df['GC_perc_30_bp_round_stop'] = 0.0
     for seq in transcript_sequences:
         end_CDS = int(NMD_features_df.loc[seq.id.split(':')[0], 'end_ORF'])
@@ -47,7 +57,12 @@ def get_GC_content_in30bp_ribo_window(transcript_sequences, NMD_features_df):
             (C_count + G_count) / 30
     return NMD_features_df
 
+
+
 def get_GC_content_in15bp_ribo_window(transcript_sequences, NMD_features_df):
+    """calculate the the GC content in both a 15bp window upstream and
+    downstream of the stop codon"""
+
     NMD_features_df['GC_perc_up_15_bp_stop'] = 0.0
     NMD_features_df['GC_perc_down_15_bp_stop'] = 0.0
     for seq in transcript_sequences:
@@ -64,7 +79,11 @@ def get_GC_content_in15bp_ribo_window(transcript_sequences, NMD_features_df):
             (C_count_down + G_count_down) / 15
     return NMD_features_df
 
+
+
 def get_number_of_exons_transcript(transcript_sequences, NMD_features_df):
+    """calculate number of exons in transcript and in the 3'UTR"""
+
     NMD_features_df['nr_exons_in_transcript'] = 0
     NMD_features_df['nr_exons_in_3prime'] = 0
     for seq in transcript_sequences:
@@ -88,7 +107,12 @@ def get_number_of_exons_transcript(transcript_sequences, NMD_features_df):
         exon_counter
     return NMD_features_df
 
+
+
 def find_UPF1_motifs_in3prime(transcript_sequences, NMD_features_df):
+    """calculate absolute and relative occurrence of UPF1 motifs in the
+    3'UTR"""
+
     NMD_features_df['UPF1_motifs_in3prime_total'] = 0
     NMD_features_df['UPF1_motifs_in3prime_relative'] = 0.0
     for seq in transcript_sequences:
@@ -100,4 +124,24 @@ def find_UPF1_motifs_in3prime(transcript_sequences, NMD_features_df):
         UPF1_motif_count
         NMD_features_df.loc[seq.id.split(':')[0],'UPF1_motifs_in3prime_relative'] =\
         UPF1_motif_count/len(three_prime)
+    return NMD_features_df
+
+
+
+
+def count_k_mers(transcript_sequences, NMD_features_df):
+    """Count the amount of DNA k-mers in a window of 30bp
+      centered around the stop codon"""
+    
+    # Define the DNA bases
+    dna_bases = ['A', 'C', 'G', 'T']
+    # Generate all possible 4-mers
+    all_4mers = [''.join(x) for x in itertools.product(dna_bases, repeat=4)]
+    for k_mer in all_4mers:
+        NMD_features_df[k_mer] = 0
+        for seq in transcript_sequences:
+            end_CDS = int(NMD_features_df.loc[seq.id.split(':')[0], 'end_ORF'])
+            window_30 = str(seq.seq[end_CDS-15:end_CDS+15])
+            NMD_features_df.loc[seq.id.split(':')[0], k_mer]\
+                  = window_30.count(k_mer)
     return NMD_features_df

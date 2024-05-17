@@ -14,6 +14,9 @@ def handle_cds_transcripts(transcript_gtftk_object, transcript_ids, NMD_features
         #if there are CDS features: CDS is defined
         if len(cds) > 0:
             stop_pos_genome, cds_length = find_termination_codon(transcript_info, cds)
+            if stop_pos_genome is None:
+                print(transcript_info)
+                continue
             stop_pos_transcript, last_ejc, exon_containing_stop_length = compose_transcript(transcript_info, stop_pos_genome)
             if stop_pos_transcript['stop_position'] == 0 or None:
                 counter += 1

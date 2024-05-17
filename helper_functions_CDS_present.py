@@ -67,7 +67,7 @@ def find_termination_codon(transcript_as_list: List[str], cds: List[List[str]]) 
                     stop_position = int(next_exon[0])
                 except IndexError:
                     #stop_position = cds_end-2
-                    stop_position = None
+                    stop_position = cds_end
         else:
             exon_end_is_cds_end = [exon for exon in exons if str(cds_end) == exon[0]]
             if len(exon_end_is_cds_end) == 0:
@@ -85,7 +85,7 @@ def find_termination_codon(transcript_as_list: List[str], cds: List[List[str]]) 
                     stop_position = int(next_exon[1])
                 except IndexError:
                     #stop_position = cds_end+2
-                    stop_position = None
+                    stop_position = cds_end
         return stop_position, cds_length
     
 
@@ -140,10 +140,5 @@ def compose_transcript(transcript_as_list, stop_position):
     trans_coord_last_ejc = transcript_coordinates['length'] - transcript_coordinates['exon_jc'][str(last_exon)]
 
     exon_containing_stop_length = int(exons[exon_containing_stop][1]) - int(exons[exon_containing_stop][0]) +1
-    if transcript_coordinates['stop_position'] == 0:
-        print('start')
-        print(strand, stop_position)
-        print(exons)
-        print(transcript_as_list)
-        print('end')
+    
     return transcript_coordinates, trans_coord_last_ejc, exon_containing_stop_length

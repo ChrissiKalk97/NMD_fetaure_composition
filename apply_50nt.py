@@ -30,7 +30,6 @@ def get_length_last_exon(transcript_ids_list, gtf_file):
     return last_exon_length_by_transcript
 
 
-
 def calculate_50nt_rule(transcripts_with_CDS: pd.DataFrame, sequences) -> pd.DataFrame:
     t_length_dict = {}
     for sequence_rec in sequences:
