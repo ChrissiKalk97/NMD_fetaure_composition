@@ -1,4 +1,7 @@
+import regex as re
 import pandas as pd
+from Bio.SeqRecord import SeqRecord
+from Bio import SeqIO
 import itertools
 from collections import Counter
 
@@ -159,11 +162,11 @@ def optimal_codon_usage(transcript_sequences, NMD_features_df):
         codon_list = [ORF[i:i+3] for i in range(0, len(ORF), 3)]
 
         counter_dict = dict(Counter(codon_list))
-        counter_optimal_codons = {codon: count for (codon, count)
-                                  in counter_dict.items() if codon in optimal_codons}
+        counter_optimal_codons = {codon: count for (
+            codon, count) in counter_dict.items() if codon in optimal_codons}
         counter_optimal = sum(counter_optimal_codons.values())
 
-        NMD_features_df.loc[seq.id.split(':')[0], 'optimal_codon_usage'] =\
-            counter_optimal/len(codon_list)
+        NMD_features_df.loc[seq.id.split(
+            ':')[0], 'optimal_codon_usage'] = counter_optimal/len(codon_list)
 
     return NMD_features_df

@@ -2,13 +2,17 @@
 # Orffinder finds all possible ORFs of a minimal length in a given transcript and outputs
 # a list of Sequence Records from the Biopyhton package is returned
 # the header naem is composed of the following:
-# id(current header of the transcript):
-# ORF-number:start_position_in_transcript:stop_position_in_transcript
+# id(current header of the transcript):ORF-number_of_ORF_in_the_current_transcript:start_position_in_transcript:stop_position_in_transcript
 
+from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
 
 minOrfLength = 20  # minimum number of amino acids per ORF
+
+# original codons functions by natasha.sernova obtained from Biostars:
+# https://www.biostars.org/p/229060/
+# code has been modified
 
 
 def get_orfs(seq, id, gene, description, annotations, countOrfs, orf_records):
@@ -37,8 +41,7 @@ def get_orfs(seq, id, gene, description, annotations, countOrfs, orf_records):
         start += 1  # promotes the starting position.
         counter += 1  # promotes the counter
 
-    # for each reading frame go through the start site 
-    # and extract and output possible proteins
+    # for each reading frame go through the start site and extract and output possible proteins
     for frame in range(3):
         # at least one start and stop codon per frame must exist
         if len(lst1[frame]) > 0 and len(lst2[frame]) > 0:
@@ -48,7 +51,7 @@ def get_orfs(seq, id, gene, description, annotations, countOrfs, orf_records):
             while currentStart < len(lst1[frame]) and currentStop < len(lst2[frame]):
                 if lst1[frame][currentStart] < lst2[frame][currentStop]:  # found valid ORF
                     # this excludes the first stop position, but includes the start
-                    orf = seq[lst1[frame][currentStart]:lst2[frame][currentStop]]
+                    orf = seq[lst1[frame][currentStart]                              :lst2[frame][currentStop]]
                     if (len(orf) % 3 == 0) and not ("N" in orf) and (len(orf)/3 >= minOrfLength):
                         ##### added Frame to ID #####
                         header = ''.join([id, ":ORF-", str(countOrfs), ":", str(
@@ -56,8 +59,7 @@ def get_orfs(seq, id, gene, description, annotations, countOrfs, orf_records):
                         sequence = seq[lst1[frame][currentStart]:lst2[frame][currentStop]+3]
                         countOrfs = countOrfs + 1
                         orf_records.append(SeqRecord(
-                            id=header, seq=sequence, name=gene, 
-                            description=description, annotations=annotations))
+                            id=header, seq=sequence, name=gene, description=description, annotations=annotations))
                     # remove all other start codons that are nested between the current start and stop
                     while currentStart < len(lst1[frame]) and lst1[frame][currentStart] < lst2[frame][currentStop]:
                         currentStart = currentStart+1
@@ -74,15 +76,9 @@ def OrfFinder(transcript_SeqRecords):
 
     for transcript in transcript_SeqRecords:
         countOrfs = 1  # ORF numbers per transcript
-        orf_records = get_orfs(transcript.seq.upper(), 
-                               transcript.id, 
-                               transcript.name,
-                               transcript.description, 
-                               transcript.annotations, 
-                               countOrfs, 
-                               orf_records)
+        orf_records = get_orfs(transcript.seq.upper(), transcript.id, transcript.name,
+                               transcript.description, transcript.annotations, countOrfs, orf_records)
         if countOrfs == 1:
-            f.write(f"Transcript {transcript.id} of gene\
-                     {transcript.name} did not contain an ORF \n")
+            f.write(f"Transcript {transcript.id} of gene {transcript.name} did not contain an ORF \n")
     f.close()
     return (orf_records)

@@ -1,5 +1,6 @@
 import regex as re
-from typing import List
+from operator import itemgetter
+from typing import Dict, List
 import pandas as pd
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -42,13 +43,12 @@ def get_fasta_tid(transcripts_no_cds, genome_file, seq_type: str, plus_stop=Fals
                 fasta_string += genome_dict[exon[5]
                                             ].seq[int(exon[0])-1:int(exon[1])+3]
             else:
-                # build the transcript sequence from the exons in 5prime to 3prime order 
-                # (+strand), exon by exon
+                # build the transcript sequence from the exons in 5' to 3' order (+-strand), exon by exon
                 # get sequence of the exon by
                 fasta_string += genome_dict[exon[5]
                                             ].seq[int(exon[0])-1:int(exon[1])]
                 # -1: 1-based system as in Ensembl, but string indexing is 0-based
-                # might need change, if assemblies have used different annotations, e.g. NCBI
+                # might need to provide this to be changed, if assemblies have used different annotations, e.g. NCBI
 
             # subsetting the chromosome at the respecitve start and stop positions
             # add exon number and genomic start end to the description
@@ -94,8 +94,7 @@ def get_cds_genomic_coordinates(orf_sequences):
                 # exon end and start are included
                 length += (exon_end - exon_start)+1
                 if orf_start < length:
-                    # this strictly smaller is needed here, otherwise the error
-                    #  occurs that the stop is smaller than the start
+                    # this strictly smaller is needed here, otherwise the error occurs that the stop is smaller than the start
                     if exon_start + orf_end - former_length > exon_end:
                         bed_string += chromosome + '\t' + str(exon_start + orf_start - former_length) + '\t' +\
                             str(exon_end) + '\t' + name + '\t' + \
@@ -210,29 +209,25 @@ def select_row(group):
     if not high_overlap.empty:
         high_overlap = high_overlap.sort_values(
             by=['protein_overlap_aa'], ascending=[False])
-        # returns lowest start posiiton
+        # returns lowest start posiiton, but if tie
         return high_overlap.loc[high_overlap['start_ORF'].idxmin()]
     # sorting according to protein overlap decides
     else:
-        #return most 5 prime ORF
+        # sort by AA overlap, such that if several ORFs start at the same position the longer one
+        # is chosen??? Should not happen...
         group = group.sort_values(by=['protein_overlap_aa'], ascending=[False])
         return group.loc[group['start_ORF'].idxmin()]
 
 
 def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
-    '''determine the CDS of an ORF by performing exact AA matching
-    with known Ensembl CDSs, select most 5 prime one of the ones
-    with a certain match length and percentage, otherwise
-    the most 5 prime ORF'''
+    ''''''
 
     reference_bed = BedTool(reference_gtf.to_bed(
         name=('gene_id', 'transcript_id'), sep='|')).saveas('pc_reference.bed')
     intersection = orf_bed_positions.intersect(
         reference_bed, wao=True, s=True).saveas('intersection.bed')
-    summed_overlap = pd.read_table(intersection.fn, names=
-                                   ['chrom', 'start', 'stop', 'name', 'score', 'strand',
-                                    'chrom_tar', 'start_tar', 'stop_tar', 'name_tar',
-                                      'score_tar', 'strand_tar', 'overlap'], low_memory=False)
+    summed_overlap = pd.read_table(intersection.fn, names=['chrom', 'start', 'stop', 'name', 'score', 'strand',
+                                                           'chrom_tar', 'start_tar', 'stop_tar', 'name_tar', 'score_tar', 'strand_tar', 'overlap'], low_memory=False)
 
     summed_overlap = summed_overlap.groupby(
         ['name', 'name_tar'])['overlap'].sum()
@@ -292,3 +287,6 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
     transcripts_with_CDS = summed_overlap.groupby('tid').apply(select_row)
 
     return transcripts_with_CDS
+
+
+# there is the -s option for bedtools to enforce strandedness: overlaps are only reported if on the same strand

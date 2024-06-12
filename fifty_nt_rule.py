@@ -8,7 +8,7 @@
 
 import os
 import sys
-import time
+
 
 import numpy as np
 import pandas as pd
@@ -27,7 +27,7 @@ from calculate_sequence_features import get_stop_codon_identity, get_base_after_
 
 
 def main():
-    
+
     # create Output directory
     output_name = sys.argv[4].split('/')[-1][:-4]
     folder_path = f'Output/{output_name}'
@@ -97,18 +97,15 @@ def main():
     if len(transcript_ids_wo_cds) > 0:
         print('transcripts for which no CDS annotation was given in the custom gtf: ',
               len(transcript_ids_wo_cds))
-        time_0 = time.time()
+
         # determine CDS for source transcripts
         transcripts_calculated_CDS, sequences = determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,
                                                               sys.argv[2], sys.argv[3], output_name)
-        CDS_time = time.time() - time_0
-        print("CDS_time_required:", CDS_time, flush=True)
 
         # drop all for which no ORF was determined
         transcripts_calculated_CDS = transcripts_calculated_CDS.dropna(
             subset='name')
 
-        time_1 = time.time()
         # get the length of the last exon per transcript for 50 nt rule (from the custom gtf)
         last_exon_length_dict = get_length_last_exon(
             transcripts_calculated_CDS['tid'].to_list(), custom_gtf)
@@ -118,8 +115,6 @@ def main():
         # apply 50nt rule
         transcripts_calculated_CDS = calculate_50nt_rule(
             transcripts_calculated_CDS, sequences)
-        
-        fifty_nt_time = time.time()-time_1
 
         # select the sequences of the ORFs selected as the CDS
         transcripts_calculated_CDS['ORF_id'] = transcripts_calculated_CDS['name'].str.split(
@@ -135,11 +130,8 @@ def main():
                 ORF_list.append(ORF)
         ORFs = ORF_list
 
-        prepare_ORFs_time = time.time()-time_1-fifty_nt_time
-
         # combine CDS sequences for given and calculated CDS
         CDS_seqs = CDS_seqs + ORFs
-        CDS_time= time.time()-time_1-fifty_nt_time-prepare_ORFs_time 
 
         # join df of calculated CDS transcripts with df of the CDS annotated transcripts
         NMD_features_df = pd.concat(
@@ -150,7 +142,6 @@ def main():
 
         # combine transcript sequences with given and calculated CDS
         transcript_seqs = transcript_seqs + sequences
-        concat_time = time.time()-time_1-fifty_nt_time-prepare_ORFs_time-CDS_time
 
     # drop rows with NA's, for those transcripts no CDS could be determined
     NMD_features_df = NMD_features_df.dropna(subset=['t_length', 'start_ORF'])
@@ -175,13 +166,6 @@ def main():
         transcript_seqs, NMD_features_df)
     NMD_features_df = count_k_mers(transcript_seqs, NMD_features_df)
     NMD_features_df = optimal_codon_usage(transcript_seqs, NMD_features_df)
-    
-    feature_time = time.time()-time_1-fifty_nt_time-prepare_ORFs_time-CDS_time-concat_time
-    print("50nt_time_required:", fifty_nt_time, flush=True)
-    print("prepare_ORFs_time_required:", prepare_ORFs_time, flush=True)
-    print("CDS_prep_time_required:", CDS_time, flush=True)
-    print("concat_time_required:", concat_time, flush=True)
-    print("feature_time_required:", feature_time, flush=True)
 
     # print output
     print(NMD_features_df.head())
