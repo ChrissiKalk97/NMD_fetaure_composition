@@ -3,6 +3,9 @@ import pandas as pd
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 import itertools
+from collections import Counter
+
+
 
 
 def get_stop_codon_identity(CDS_seqs, NMD_features_df):
@@ -145,3 +148,30 @@ def count_k_mers(transcript_sequences, NMD_features_df):
             NMD_features_df.loc[seq.id.split(':')[0], k_mer]\
                   = window_30.count(k_mer)
     return NMD_features_df
+
+
+#calculate usage of most common codons
+def optimal_codon_usage(transcript_sequences, NMD_features_df):
+
+    optimal_codons = set(('ATG', 'TGG', 'AGC', 'TTC', 'CTG', 'TAC', 'TGC', 'CCC',\
+                         'CAG', 'AGA', 'ATC', 'ACC', 'AAC', 'AAG', 'GTG', 'GCC', 'GAC',\
+                            'GAG', 'GGC'))
+    print('Number of optimal codons', len(optimal_codons))
+
+    NMD_features_df['optimal_codon_usage'] = 0.0
+
+
+    for seq in transcript_sequences:
+        end_CDS = int(NMD_features_df.loc[seq.id.split(':')[0], 'end_ORF'])
+        start_CDS = int(NMD_features_df.loc[seq.id.split(':')[0], 'start_ORF'])
+        ORF = str(seq.seq[start_CDS:end_CDS])
+        codon_list = [ORF[i:i+3] for i in range(0, len(ORF), 3)]
+
+        counter_dict = dict(Counter(codon_list))
+        counter_optimal_codons = {codon: count for (codon, count) in counter_dict.items() if codon in optimal_codons}
+        counter_optimal = sum(counter_optimal_codons.values())
+
+        NMD_features_df.loc[seq.id.split(':')[0], 'optimal_codon_usage'] = counter_optimal/len(codon_list)
+    
+    return NMD_features_df
+

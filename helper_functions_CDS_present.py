@@ -112,6 +112,8 @@ def compose_transcript(transcript_as_list, stop_position):
             if stop_position >= five_prime and stop_position <= three_prime:
                 transcript_coordinates['stop_position'] = transcript_coordinates['length'] + stop_position - five_prime
                 exon_containing_stop = exon_index
+                dist_stop_next_EJC = three_prime - stop_position
+
             transcript_coordinates['length']+= length#add length of exon to total length of the transcript
             transcript_coordinates['exon_jc'][exon_num] = length#note down the length of the transcript including current exon = EJC position
             if last_exon < int(exon_num):
@@ -130,6 +132,8 @@ def compose_transcript(transcript_as_list, stop_position):
                 #distance from current (minus strand) five prime to PTC, is equivaluent to 5#-stopp_position in +strand coordinates
                 transcript_coordinates['stop_position'] =  transcript_coordinates['length'] - stop_position + five_prime
                 exon_containing_stop = exon_index
+                dist_stop_next_EJC = five_prime - stop_position
+
             transcript_coordinates['length']+= length
             transcript_coordinates['exon_jc'][exon_num] = length
             if last_exon < int(exon_num):
@@ -141,4 +145,4 @@ def compose_transcript(transcript_as_list, stop_position):
 
     exon_containing_stop_length = int(exons[exon_containing_stop][1]) - int(exons[exon_containing_stop][0]) +1
     
-    return transcript_coordinates, trans_coord_last_ejc, exon_containing_stop_length
+    return transcript_coordinates, trans_coord_last_ejc, exon_containing_stop_length, dist_stop_next_EJC

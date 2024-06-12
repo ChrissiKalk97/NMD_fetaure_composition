@@ -65,6 +65,7 @@ def get_cds_genomic_coordinates(orf_sequences):
     bed_string = ''
     transcripts = []
     orf_dict_exon_with_stop_length = {}
+    distance_stop_next_EJC = {}
     for orf in orf_sequences:
         tid = orf.id.split(':')[0]
         transcripts.append(tid)
@@ -94,10 +95,12 @@ def get_cds_genomic_coordinates(orf_sequences):
                         bed_string += chromosome + '\t' + str(exon_start + orf_start - former_length)\
                               + '\t' + str(exon_start + orf_end - former_length) + '\t' + name + '\t'\
                                   + orf.annotations['score'] + '\t' + strand + '\n'
+                        distance_stop_next_EJC[orf.name + '|' + orf.id] = length - orf_end + 1
                         orf_end = 0
                 counter += 1
                 #the last exon encountered has the stop codon, note down exon length
                 orf_dict_exon_with_stop_length[orf.name + '|' + orf.id] = exon_end - exon_start + 1
+                
         else:
             counter = len(transcript_info) - 1
             while orf_end > 0:
@@ -116,6 +119,7 @@ def get_cds_genomic_coordinates(orf_sequences):
                         bed_string += chromosome + '\t' + str(exon_end - orf_end + former_length) +\
                             '\t' + str(exon_end - orf_start + former_length) + '\t' + name + '\t' +\
                                   orf.annotations['score'] + '\t' + strand + '\n'
+                        distance_stop_next_EJC[orf.name + '|' + orf.id] = length - orf_end + 1
                         orf_end = 0
                 counter -= 1
                 #the last exon encountered has the stop codon, note down exon length
@@ -132,7 +136,7 @@ def get_cds_genomic_coordinates(orf_sequences):
 
         genomic_coordinates = pybedtools.BedTool(bed_string, from_string=True)\
             .saveas('genomic_coordinates_ORFs.bed')
-        return genomic_coordinates, orf_dict_exon_with_stop_length
+        return genomic_coordinates, orf_dict_exon_with_stop_length, distance_stop_next_EJC
     except Exception as e:
         print(e)
         for line in bed_string.split('\n'):

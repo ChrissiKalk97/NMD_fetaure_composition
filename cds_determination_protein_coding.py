@@ -79,7 +79,8 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,\
     
 
     #get cds coordinates genomic
-    orf_bed_positions, orf_dict_exon_with_stop_length = get_cds_genomic_coordinates(ORFs)
+    orf_bed_positions, orf_dict_exon_with_stop_length, distance_stop_next_EJC\
+    = get_cds_genomic_coordinates(ORFs)
     del ORFs
 
     #obtain sequences of the target transcripts for exact matching
@@ -110,6 +111,11 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,\
     #map the exon length of the exon with stop to the table
     transcripts_with_CDS['exon_with_stop_length'] =\
         transcripts_with_CDS['name'].map(orf_dict_exon_with_stop_length)
+    
+
+    #map the exon length of the exon with stop to the table
+    transcripts_with_CDS['distance_stop_next_EJC'] =\
+        transcripts_with_CDS['name'].map(distance_stop_next_EJC)
 
 
     return transcripts_with_CDS, sequences
