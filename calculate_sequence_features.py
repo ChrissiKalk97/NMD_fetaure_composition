@@ -1,11 +1,6 @@
-import regex as re
 import pandas as pd
-from Bio.SeqRecord import SeqRecord
-from Bio import SeqIO
 import itertools
 from collections import Counter
-
-
 
 
 def get_stop_codon_identity(CDS_seqs, NMD_features_df):
@@ -20,7 +15,6 @@ def get_stop_codon_identity(CDS_seqs, NMD_features_df):
         elif str(seq.seq[-3:]) == 'TAA':
             NMD_features_df.loc[seq.id.split(':')[0], 'stop_TAA'] = 1
     return NMD_features_df
-
 
 
 def get_base_after_stop(transcript_sequences, NMD_features_df):
@@ -46,7 +40,6 @@ def get_base_after_stop(transcript_sequences, NMD_features_df):
     return NMD_features_df
 
 
-
 def get_GC_content_in30bp_ribo_window(transcript_sequences, NMD_features_df):
     """calculate the GC content in a window of 30bp centered around the stop codon"""
 
@@ -59,7 +52,6 @@ def get_GC_content_in30bp_ribo_window(transcript_sequences, NMD_features_df):
         NMD_features_df.loc[seq.id.split(':')[0], 'GC_perc_30_bp_round_stop'] = \
             (C_count + G_count) / 30
     return NMD_features_df
-
 
 
 def get_GC_content_in15bp_ribo_window(transcript_sequences, NMD_features_df):
@@ -83,7 +75,6 @@ def get_GC_content_in15bp_ribo_window(transcript_sequences, NMD_features_df):
     return NMD_features_df
 
 
-
 def get_number_of_exons_transcript(transcript_sequences, NMD_features_df):
     """calculate number of exons in transcript and in the 3'UTR"""
 
@@ -91,25 +82,28 @@ def get_number_of_exons_transcript(transcript_sequences, NMD_features_df):
     NMD_features_df['nr_exons_in_3prime'] = 0
     for seq in transcript_sequences:
         description = seq.description.split(':')
-        NMD_features_df.loc[seq.id.split(':')[0],'nr_exons_in_transcript'] = \
-        len(description) - 2
-        length_3prime = NMD_features_df.loc[seq.id.split(':')[0], '3_UTR_length']
+        NMD_features_df.loc[seq.id.split(':')[0], 'nr_exons_in_transcript'] = \
+            len(description) - 2
+        length_3prime = NMD_features_df.loc[seq.id.split(':')[
+            0], '3_UTR_length']
         exon_counter = 0
         if description[1] == 'strand-':
             while length_3prime > 0:
                 exon_coords = description[2 + exon_counter].split('-')
-                length_3prime = length_3prime - (int(exon_coords[2]) - int(exon_coords[1]) +1)
+                length_3prime = length_3prime - \
+                    (int(exon_coords[2]) - int(exon_coords[1]) + 1)
                 exon_counter = exon_counter + 1
         else:
             while length_3prime > 0:
-                #for plus strand get exons from the back
-                exon_coords = description[len(description) - 1 - exon_counter].split('-')
-                length_3prime = length_3prime - (int(exon_coords[2]) - int(exon_coords[1]) +1)
+                # for plus strand get exons from the back
+                exon_coords = description[len(
+                    description) - 1 - exon_counter].split('-')
+                length_3prime = length_3prime - \
+                    (int(exon_coords[2]) - int(exon_coords[1]) + 1)
                 exon_counter = exon_counter + 1
-        NMD_features_df.loc[seq.id.split(':')[0],'nr_exons_in_3prime'] = \
-        exon_counter
+        NMD_features_df.loc[seq.id.split(':')[0], 'nr_exons_in_3prime'] = \
+            exon_counter
     return NMD_features_df
-
 
 
 def find_UPF1_motifs_in3prime(transcript_sequences, NMD_features_df):
@@ -123,19 +117,17 @@ def find_UPF1_motifs_in3prime(transcript_sequences, NMD_features_df):
         three_prime = str(seq.seq[end_CDS:])
         UPF1_motif_count = three_prime.count('CTGGG')
         UPF1_motif_count = UPF1_motif_count + three_prime.count('CTGTG')
-        NMD_features_df.loc[seq.id.split(':')[0],'UPF1_motifs_in3prime_total'] =\
-        UPF1_motif_count
-        NMD_features_df.loc[seq.id.split(':')[0],'UPF1_motifs_in3prime_relative'] =\
-        UPF1_motif_count/len(three_prime)
+        NMD_features_df.loc[seq.id.split(':')[0], 'UPF1_motifs_in3prime_total'] =\
+            UPF1_motif_count
+        NMD_features_df.loc[seq.id.split(':')[0], 'UPF1_motifs_in3prime_relative'] =\
+            UPF1_motif_count/len(three_prime)
     return NMD_features_df
-
-
 
 
 def count_k_mers(transcript_sequences, NMD_features_df):
     """Count the amount of DNA k-mers in a window of 30bp
       centered around the stop codon"""
-    
+
     # Define the DNA bases
     dna_bases = ['A', 'C', 'G', 'T']
     # Generate all possible 4-mers
@@ -146,20 +138,19 @@ def count_k_mers(transcript_sequences, NMD_features_df):
             end_CDS = int(NMD_features_df.loc[seq.id.split(':')[0], 'end_ORF'])
             window_30 = str(seq.seq[end_CDS-15:end_CDS+15])
             NMD_features_df.loc[seq.id.split(':')[0], k_mer]\
-                  = window_30.count(k_mer)
+                = window_30.count(k_mer)
     return NMD_features_df
 
 
-#calculate usage of most common codons
+# calculate usage of most common codons
 def optimal_codon_usage(transcript_sequences, NMD_features_df):
 
-    optimal_codons = set(('ATG', 'TGG', 'AGC', 'TTC', 'CTG', 'TAC', 'TGC', 'CCC',\
-                         'CAG', 'AGA', 'ATC', 'ACC', 'AAC', 'AAG', 'GTG', 'GCC', 'GAC',\
-                            'GAG', 'GGC'))
+    optimal_codons = set(('ATG', 'TGG', 'AGC', 'TTC', 'CTG', 'TAC', 'TGC', 'CCC',
+                         'CAG', 'AGA', 'ATC', 'ACC', 'AAC', 'AAG', 'GTG', 'GCC', 'GAC',
+                          'GAG', 'GGC'))
     print('Number of optimal codons', len(optimal_codons))
 
     NMD_features_df['optimal_codon_usage'] = 0.0
-
 
     for seq in transcript_sequences:
         end_CDS = int(NMD_features_df.loc[seq.id.split(':')[0], 'end_ORF'])
@@ -168,10 +159,11 @@ def optimal_codon_usage(transcript_sequences, NMD_features_df):
         codon_list = [ORF[i:i+3] for i in range(0, len(ORF), 3)]
 
         counter_dict = dict(Counter(codon_list))
-        counter_optimal_codons = {codon: count for (codon, count) in counter_dict.items() if codon in optimal_codons}
+        counter_optimal_codons = {codon: count for (codon, count)
+                                  in counter_dict.items() if codon in optimal_codons}
         counter_optimal = sum(counter_optimal_codons.values())
 
-        NMD_features_df.loc[seq.id.split(':')[0], 'optimal_codon_usage'] = counter_optimal/len(codon_list)
-    
-    return NMD_features_df
+        NMD_features_df.loc[seq.id.split(':')[0], 'optimal_codon_usage'] =\
+            counter_optimal/len(codon_list)
 
+    return NMD_features_df
