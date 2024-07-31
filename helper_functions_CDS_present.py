@@ -2,6 +2,7 @@ from typing import List
 from operator import itemgetter
 
 
+
 def check_stop_codon(transcript_as_list: List[List[str]], strand: str):
     stop_codon = [
         sub_list for sub_list in transcript_as_list if 'stop_codon' in sub_list]
@@ -26,14 +27,16 @@ def get_cds_end(cds: List[List[str]], strand: str) -> int:
             if stop_position_plus < three_prime:
                 stop_position_plus = three_prime
                 cds_end = three_prime
-                cds_length += three_prime - five_prime + 1
+            #the cds length always need to be added, even if the stop position is not
+            #updated, because the entries are prefiltered for CDS features
+            cds_length += three_prime - five_prime + 1
         else:
             three_prime = int(partial_cds[0])
             five_prime = int(partial_cds[1])
             if stop_position_minus > three_prime:
                 stop_position_minus = three_prime
                 cds_end = three_prime
-                cds_length += five_prime - three_prime + 1
+            cds_length += five_prime - three_prime + 1
     return cds_end, cds_length
 
 
@@ -53,7 +56,9 @@ def find_termination_codon(transcript_as_list: List[str], cds: List[List[str]]) 
         # get exons of transcript
         exons = [sub_list for sub_list in transcript_as_list if 'exon' in sub_list]
         # sort list according to start positions of exons
-        exons = sorted(exons, key=itemgetter(int(0)))
+        exons.sort(key=lambda elem: int(elem[0]))
+        #exons = sorted(exons, key=itemgetter(int(0)))
+        #not working!!!
         if strand == '+':
             # check whether the end of the CDS coincides with the end of an exon
             exon_end_is_cds_end = [
@@ -83,12 +88,12 @@ def find_termination_codon(transcript_as_list: List[str], cds: List[List[str]]) 
                 exon_num = exons.index(exon_end_is_cds_end[0])
                 # annotate the start of the next exon as stop position
                 try:
-                    if exon_num != 0:
+                    if exon_num != 0 and exon_num != len(exons)-1:
                         next_exon = exons[exon_num-1]
+                        # if cds ends with exon and there is a next exon, set stop position to first bp of next exon
+                        stop_position = int(next_exon[1])
                     else:
-                        next_exon = exon_end_is_cds_end[0]
-                    # if cds ends with exon and there is a next exon, set stop position to first bp of next exon
-                    stop_position = int(next_exon[1])
+                        stop_position = cds_end
                 except IndexError:
                     # stop_position = cds_end+2
                     stop_position = cds_end
@@ -98,7 +103,6 @@ def find_termination_codon(transcript_as_list: List[str], cds: List[List[str]]) 
 def compose_transcript(transcript_as_list, stop_position):
     # extract all exons of the transcript
     exons = [sub_list for sub_list in transcript_as_list if 'exon' in sub_list]
-    # print(exons)
     strand = exons[0][4]
     # dict to store transcript coordinates for exon junctions and stop_position
     transcript_coordinates = {'length': 0, 'exon_jc': {}, 'stop_position': 0}
@@ -115,15 +119,20 @@ def compose_transcript(transcript_as_list, stop_position):
             five_prime = int(exon[0])
             three_prime = int(exon[1])
             length = three_prime - five_prime + 1
-            # if the stop position is inside this exon: calculate the stop position in transcript coordinates, length plus distance from stop to 5' end of exon
+            # if the stop position is inside this exon: calculate the stop position in transcript coordinates,
+            #  length plus distance from stop to 5' end of exon
             if stop_position >= five_prime and stop_position <= three_prime:
+                #print('curr_length', transcript_coordinates['length'])
+                #print('stop_pos', stop_position)
+                #print('five_prime', five_prime)
                 transcript_coordinates['stop_position'] = transcript_coordinates['length'] + \
-                    stop_position - five_prime
+                    stop_position - five_prime + 1
                 exon_containing_stop = exon_index
                 dist_stop_next_EJC = three_prime - stop_position
 
             # add length of exon to total length of the transcript
             transcript_coordinates['length'] += length
+            
             # note down the length of the transcript including current exon = EJC position
             transcript_coordinates['exon_jc'][exon_num] = length
             if last_exon < int(exon_num):
@@ -132,16 +141,20 @@ def compose_transcript(transcript_as_list, stop_position):
         else:
             five_prime = int(exon[1])
             three_prime = int(exon[0])
-            # for the negative strand the ordering is adjusted such that the first exon is the on with
-            # the largest genoic +-strand cooridnates
+            # for the negative strand the ordering is adjusted such that the first exon is the one with
+            # the largest genoic +strand cooridnates
             # the five prime end is bigger than the 3 prime end (as this is in respect to the negative strand)
             # plus 1 because the las coordinate is also part of the exon
             length = five_prime - three_prime + 1
             if stop_position <= five_prime and stop_position >= three_prime:
                 # as cooridnates for stop and five_prime are on +strand but we are calculating on the -strand
-                # distance from current (minus strand) five prime to PTC, is equivaluent to 5#-stopp_position in +strand coordinates
+                # distance from current (minus strand) five prime to PTC, is equivaluent to 5
+                # -stopp_position in +strand coordinates
+                #print('curr_length', transcript_coordinates['length'])
+                #print('stop_pos', stop_position)
+                #print('five_prime', five_prime)
                 transcript_coordinates['stop_position'] = transcript_coordinates['length'] - \
-                    stop_position + five_prime
+                    stop_position + five_prime + 1 
                 exon_containing_stop = exon_index
                 dist_stop_next_EJC = five_prime - stop_position
 

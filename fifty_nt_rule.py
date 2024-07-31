@@ -8,7 +8,7 @@
 
 import os
 import sys
-
+import time
 
 import numpy as np
 import pandas as pd
@@ -27,7 +27,7 @@ from calculate_sequence_features import get_stop_codon_identity, get_base_after_
 
 
 def main():
-
+    start_time = time.time()
     # create Output directory
     output_name = sys.argv[4].split('/')[-1][:-4]
     folder_path = f'Output/{output_name}'
@@ -66,6 +66,9 @@ def main():
         .select_by_key('feature', 'CDS,exon,stop_codon')\
         .extract_data('transcript_id,start,end,exon_number,feature,strand,chrom,gene_id,score',
                       as_dict_of_merged_list=True)
+    time_gtftk = time.time()
+
+    print("Time for pygtftk", time_gtftk-start_time)
 
     #################################################################################
     ### handling of transcripts with CDS anno in custom gtf###########################
@@ -75,6 +78,9 @@ def main():
     transcript_ids_wo_cds, NMD_features_df =\
         handle_cds_transcripts(transcript_gtftk_object,
                                transcript_ids, NMD_features_df)
+    time_cds_transcripts = time.time()
+
+    print("Time for CDS transcripts", time_cds_transcripts-time_gtftk)
 
     # get transcript and ORF sequences for the transcripts with CDS
     transcript_ids_wo_cds_set = set(transcript_ids_wo_cds)
@@ -90,6 +96,9 @@ def main():
             transcripts_with_cds, sys.argv[3], seq_type='exon')
         CDS_seqs = get_fasta_tid(transcripts_with_cds,
                                  sys.argv[3], seq_type='CDS', plus_stop=True)
+        
+    time_seqs = time.time()
+    print("Time for CDS transcripts", time_seqs - time_cds_transcripts)
 
     #################################################################################
     ### handle transcripts with no CDS annoation: CDS determintation, then 50 nt rule#
@@ -166,6 +175,10 @@ def main():
         transcript_seqs, NMD_features_df)
     NMD_features_df = count_k_mers(transcript_seqs, NMD_features_df)
     NMD_features_df = optimal_codon_usage(transcript_seqs, NMD_features_df)
+
+    time_features = time.time()
+
+    print("Time for features", time_features-time_seqs)
 
     # print output
     print(NMD_features_df.head())

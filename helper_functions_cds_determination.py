@@ -226,8 +226,10 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
         name=('gene_id', 'transcript_id'), sep='|')).saveas('pc_reference.bed')
     intersection = orf_bed_positions.intersect(
         reference_bed, wao=True, s=True).saveas('intersection.bed')
-    summed_overlap = pd.read_table(intersection.fn, names=['chrom', 'start', 'stop', 'name', 'score', 'strand',
-                                                           'chrom_tar', 'start_tar', 'stop_tar', 'name_tar', 'score_tar', 'strand_tar', 'overlap'], low_memory=False)
+    summed_overlap = pd.read_table(intersection.fn, 
+                                   names=['chrom', 'start', 'stop', 'name', 'score', 'strand',\
+                                    'chrom_tar', 'start_tar', 'stop_tar', 'name_tar', 'score_tar',\
+                                    'strand_tar', 'overlap'], low_memory=False)
 
     summed_overlap = summed_overlap.groupby(
         ['name', 'name_tar'])['overlap'].sum()

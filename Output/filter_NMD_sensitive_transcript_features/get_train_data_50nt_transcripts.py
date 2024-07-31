@@ -5,7 +5,7 @@
 #differentially upregulated, downregulated and insignificant transcripts               #
 ########################################################################################
 
-#usage: python get_train_data_50nt_transcripts.py features.csv up.csv down.csv insign.csv outname
+#usage: python get_train_data_50nt_transcripts.py features.csv up.csv down.csv insign.csv outname 0/1
 
 import sys
 import pandas as pd

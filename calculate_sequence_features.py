@@ -118,12 +118,13 @@ def find_UPF1_motifs_in3prime(transcript_sequences, NMD_features_df):
     for seq in transcript_sequences:
         end_CDS = int(NMD_features_df.loc[seq.id.split(':')[0], 'end_ORF'])
         three_prime = str(seq.seq[end_CDS:])
-        UPF1_motif_count = three_prime.count('CTGGG')
-        UPF1_motif_count = UPF1_motif_count + three_prime.count('CTGTG')
-        NMD_features_df.loc[seq.id.split(':')[0], 'UPF1_motifs_in3prime_total'] =\
-            UPF1_motif_count
-        NMD_features_df.loc[seq.id.split(':')[0], 'UPF1_motifs_in3prime_relative'] =\
-            UPF1_motif_count/len(three_prime)
+        if len(three_prime) > 0:
+            UPF1_motif_count = three_prime.count('CTGGG')
+            UPF1_motif_count = UPF1_motif_count + three_prime.count('CTGTG')
+            NMD_features_df.loc[seq.id.split(':')[0], 'UPF1_motifs_in3prime_total'] =\
+                UPF1_motif_count
+            NMD_features_df.loc[seq.id.split(':')[0], 'UPF1_motifs_in3prime_relative'] =\
+                UPF1_motif_count/len(three_prime)
     return NMD_features_df
 
 
@@ -139,8 +140,9 @@ def count_k_mers(transcript_sequences, NMD_features_df):
         NMD_features_df[k_mer] = 0
         for seq in transcript_sequences:
             end_CDS = int(NMD_features_df.loc[seq.id.split(':')[0], 'end_ORF'])
-            window_30 = str(seq.seq[end_CDS-15:end_CDS+15])
-            NMD_features_df.loc[seq.id.split(':')[0], k_mer]\
+            if end_CDS - 15 > 0 and end_CDS + 15 < len(seq.seq):
+                window_30 = str(seq.seq[end_CDS-15:end_CDS+15])
+                NMD_features_df.loc[seq.id.split(':')[0], k_mer]\
                 = window_30.count(k_mer)
     return NMD_features_df
 
@@ -159,14 +161,24 @@ def optimal_codon_usage(transcript_sequences, NMD_features_df):
         end_CDS = int(NMD_features_df.loc[seq.id.split(':')[0], 'end_ORF'])
         start_CDS = int(NMD_features_df.loc[seq.id.split(':')[0], 'start_ORF'])
         ORF = str(seq.seq[start_CDS:end_CDS])
-        codon_list = [ORF[i:i+3] for i in range(0, len(ORF), 3)]
+        if len(ORF)%3 == 0:
+            codon_list = [ORF[i:i+3] for i in range(0, len(ORF), 3)]
+        else:
+            rest = len(ORF)%3
+            codon_list = [ORF[i:i+3] for i in range(0, len(ORF)-rest, 3)]
+           
 
         counter_dict = dict(Counter(codon_list))
         counter_optimal_codons = {codon: count for (
             codon, count) in counter_dict.items() if codon in optimal_codons}
         counter_optimal = sum(counter_optimal_codons.values())
 
-        NMD_features_df.loc[seq.id.split(
-            ':')[0], 'optimal_codon_usage'] = counter_optimal/len(codon_list)
+        if len(codon_list) == 0:
+            print(seq, 'does not have codons')
+            NMD_features_df.loc[seq.id.split(
+            ':')[0], 'optimal_codon_usage'] = pd.NA
+        else:
+            NMD_features_df.loc[seq.id.split(
+                ':')[0], 'optimal_codon_usage'] = counter_optimal/len(codon_list)
 
     return NMD_features_df
