@@ -42,6 +42,17 @@ def main():
     # ignore pandas warnings
     simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 
+    #protein coding sequences from reference or as separate fasta file
+    if len(sys.argv) > 5:
+        use_fasta = True
+        prot_cod_fasta = sys.argv[5]
+        prot_cod_bed = sys.argv[6]
+    else: 
+        use_fasta = False
+        prot_cod_fasta = None
+        prot_cod_bed = None
+
+
     #################################################################################
     ### start with the feature calculation for the transcriptome assemblies###########
     #################################################################################
@@ -84,9 +95,7 @@ def main():
 
     # get transcript and ORF sequences for the transcripts with CDS
     transcript_ids_wo_cds_set = set(transcript_ids_wo_cds)
-    tids_with_cds = [
-        tid for tid in transcript_ids if tid not in transcript_ids_wo_cds_set]
-    tids_with_cds_set = set(tids_with_cds)
+    tids_with_cds_set = set(tid for tid in transcript_ids if tid not in transcript_ids_wo_cds_set)
     CDS_seqs = []
     transcript_seqs = []
     if len(tids_with_cds_set) > 0:
@@ -109,7 +118,7 @@ def main():
 
         # determine CDS for source transcripts
         transcripts_calculated_CDS, sequences = determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,
-                                                              sys.argv[2], sys.argv[3], output_name)
+                                                              sys.argv[2], sys.argv[3], output_name, use_fasta, prot_cod_fasta, prot_cod_bed)
 
         # drop all for which no ORF was determined
         transcripts_calculated_CDS = transcripts_calculated_CDS.dropna(
@@ -132,12 +141,14 @@ def main():
             'string')
         ORFs = SeqIO.parse(
             f'Output/{output_name}_ORFS_protein_coding_genes.fasta', "fasta")
-        ORF_list = []
+        #ORF_list = []
         ORF_id_set = set(transcripts_calculated_CDS['ORF_id'].unique())
-        for ORF in ORFs:
-            if ORF.id in ORF_id_set:
-                ORF_list.append(ORF)
-        ORFs = ORF_list
+        ###for ORF in ORFs:
+           # if ORF.id in ORF_id_set:
+            #    ORF_list.append(ORF)
+        #ORFs = ORF_list
+
+        ORFs = [ORF for ORF in ORFs if ORF.id in ORF_id_set]
 
         # combine CDS sequences for given and calculated CDS
         CDS_seqs = CDS_seqs + ORFs
@@ -189,9 +200,9 @@ def main():
 
     # drop unnecessary columns
     if len(transcript_ids_wo_cds) > 0:
-        NMD_features_df.drop(['gid', 'gid_target', 'ORF_nr', 'target_length', 'name',
-                              'target_coverage_percentage', 'protein_overlap_perc', 'overlap',
-                              'protein_overlap_aa'], axis=1, inplace=True)
+        NMD_features_df.drop(['gid', 'gid_target', 'ORF_nr',  'name',
+                                'protein_overlap_perc', 'overlap',
+                                'protein_overlap_aa'], axis=1, inplace=True)#'target_length', 'target_coverage_percentage', 
 
     # write results to csv
     NMD_features_df.to_csv(f'Output/{output_name}.csv')

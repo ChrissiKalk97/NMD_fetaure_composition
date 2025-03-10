@@ -49,11 +49,12 @@ def get_GC_content_in30bp_ribo_window(transcript_sequences, NMD_features_df):
     NMD_features_df['GC_perc_30_bp_round_stop'] = 0.0
     for seq in transcript_sequences:
         end_CDS = int(NMD_features_df.loc[seq.id.split(':')[0], 'end_ORF'])
-        window_30 = str(seq.seq[end_CDS-15:end_CDS+15])
-        C_count = window_30.count('C')
-        G_count = window_30.count('G')
-        NMD_features_df.loc[seq.id.split(':')[0], 'GC_perc_30_bp_round_stop'] = \
-            (C_count + G_count) / 30
+        if end_CDS - 15 > 0 and end_CDS + 15 < len(seq.seq):
+            window_30 = str(seq.seq[end_CDS-15:end_CDS+15])
+            C_count = window_30.count('C')
+            G_count = window_30.count('G')
+            NMD_features_df.loc[seq.id.split(':')[0], 'GC_perc_30_bp_round_stop'] = \
+                (C_count + G_count) / 30
     return NMD_features_df
 
 
@@ -65,15 +66,17 @@ def get_GC_content_in15bp_ribo_window(transcript_sequences, NMD_features_df):
     NMD_features_df['GC_perc_down_15_bp_stop'] = 0.0
     for seq in transcript_sequences:
         end_CDS = int(NMD_features_df.loc[seq.id.split(':')[0], 'end_ORF'])
-        window_up_15 = str(seq.seq[end_CDS-15:end_CDS])
-        window_down_15 = str(seq.seq[end_CDS:end_CDS+15])
-        C_count_up = window_up_15.count('C')
-        G_count_up = window_up_15.count('G')
-        C_count_down = window_down_15.count('C')
-        G_count_down = window_down_15.count('G')
-        NMD_features_df.loc[seq.id.split(':')[0], 'GC_perc_up_15_bp_stop'] = \
+        if end_CDS - 15 > 0:
+            window_up_15 = str(seq.seq[end_CDS-15:end_CDS])
+            C_count_up = window_up_15.count('C')
+            G_count_up = window_up_15.count('G')
+            NMD_features_df.loc[seq.id.split(':')[0], 'GC_perc_up_15_bp_stop'] = \
             (C_count_up + G_count_up) / 15
-        NMD_features_df.loc[seq.id.split(':')[0], 'GC_perc_down_15_bp_stop'] = \
+        if end_CDS + 15 < len(seq.seq):
+            window_down_15 = str(seq.seq[end_CDS:end_CDS+15])
+            C_count_down = window_down_15.count('C')
+            G_count_down = window_down_15.count('G')
+            NMD_features_df.loc[seq.id.split(':')[0], 'GC_perc_down_15_bp_stop'] = \
             (C_count_down + G_count_down) / 15
     return NMD_features_df
 
@@ -164,6 +167,7 @@ def optimal_codon_usage(transcript_sequences, NMD_features_df):
         if len(ORF)%3 == 0:
             codon_list = [ORF[i:i+3] for i in range(0, len(ORF), 3)]
         else:
+            print('ORF length not divisible by 3!!!')
             rest = len(ORF)%3
             codon_list = [ORF[i:i+3] for i in range(0, len(ORF)-rest, 3)]
            
@@ -180,5 +184,7 @@ def optimal_codon_usage(transcript_sequences, NMD_features_df):
         else:
             NMD_features_df.loc[seq.id.split(
                 ':')[0], 'optimal_codon_usage'] = counter_optimal/len(codon_list)
+        
+    print('There are optimal codon usage entries larger one', (NMD_features_df['optimal_codon_usage'] > 1).any())
 
     return NMD_features_df
