@@ -44,8 +44,7 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,
     print("Time to get and write ORFs to fasta:", get_write_ORFs)
 
     # extract gene ids of the transcripts that make ORFs
-    gene_ids_ORF_transcripts =  list(set(orf.name for orf in ORFs))
-   
+    gene_ids_ORF_transcripts = list(set(orf.name for orf in ORFs))
 
     reference_gtf_CDS = get_pct_reference(
         reference_file, gene_ids_ORF_transcripts)
@@ -62,7 +61,7 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,
 
     # get protein coding genes that are present in the custom gtf file
     protein_coding_genes = set(target_info[6]
-                            for target_info in reference_tragets.values())
+                               for target_info in reference_tragets.values())
 
     # ORF seqeunces in DNA
     ORFs_for_fasta = [SeqRecord(id=str(orf.name) + '|' + str(orf.id),
@@ -88,10 +87,11 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,
 
     # obtain sequences of the target transcripts for exact matching
     if use_fasta == False:
+        # print(reference_tragets)
         target_sequences = get_fasta_tid(
             reference_tragets, genome_file, seq_type='CDS')
         target_sequences = [SeqRecord(id=str(target.name) + '|' + str(target.id),
-                                    seq=target.seq.translate(), description='') for target in target_sequences]
+                                      seq=target.seq.translate(), description='') for target in target_sequences]
         SeqIO.write(target_sequences,
                     f'Output/{output_name}_target_sequences.fasta', 'fasta')
         del target_sequences
@@ -99,21 +99,21 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,
         genomic_and_ref_seq = time.time() - start_time - get_fasta - get_write_ORFs - \
             prepare_ref_time - filtering_pc_writing
         print("Time for genomic coordinates and protein sequence of possible target CDS",
-            genomic_and_ref_seq)
+              genomic_and_ref_seq)
 
         # determine the CDS for the transcripts
         transcripts_with_CDS = find_cds_orf(reference_gtf_CDS, orf_bed_positions,
-                                            f'Output/{output_name}_ORFFinder.fasta', 
+                                            f'Output/{output_name}_ORFFinder.fasta',
                                             f'Output/{output_name}_target_sequences.fasta',
-                                              use_fasta,  prot_cod_bed)
+                                            use_fasta,  prot_cod_bed)
         t_find_cds_orf = time.time() - start_time - get_fasta - get_write_ORFs -\
             prepare_ref_time - filtering_pc_writing - genomic_and_ref_seq
         print("Time needed to find the CDS: ", t_find_cds_orf)
-    
+
     else:
-         # determine the CDS for the transcripts
+        # determine the CDS for the transcripts
         transcripts_with_CDS = find_cds_orf(reference_gtf_CDS, orf_bed_positions,
-                                            f'Output/{output_name}_ORFFinder.fasta', 
+                                            f'Output/{output_name}_ORFFinder.fasta',
                                             prot_cod_fasta, use_fasta, prot_cod_bed)
 
     # clean-up
@@ -122,7 +122,8 @@ def determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,
     # filter for transcripts, for which an ORFs was found
     transcripts_of_interest = transcripts_with_CDS['name'].str.split(
         r':|\|').str[1]
-    sequences = [seq for seq in sequences if seq.id in transcripts_of_interest.values]
+    sequences = [
+        seq for seq in sequences if seq.id in transcripts_of_interest.values]
 
     SeqIO.write(
         sequences, f'Output/{output_name}_transcripts_of_interest.fasta', 'fasta')

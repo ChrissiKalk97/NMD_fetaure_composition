@@ -37,7 +37,9 @@ def get_fasta_tid(transcripts_no_cds, genome_file, seq_type: str, plus_stop=Fals
         transcript_exons = [
             sub_list for sub_list in transcript_info if seq_type in sub_list]
         # sort list according to start positions of exons
+        # if len(transcript_exons) > 0:
         transcript_exons.sort(key=lambda elem: int(elem[0]))
+
         for idx, exon in enumerate(transcript_exons):
             if plus_stop == True and idx == len(transcript_exons) - 1:
                 fasta_string += genome_dict[exon[5]
@@ -219,32 +221,48 @@ def select_row(group):
         return group.loc[group['start_ORF'].idxmin()]
 
 
-def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
+def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file, use_fasta,  prot_cod_bed):
     ''''''
-
-    reference_bed = BedTool(reference_gtf.to_bed(
-        name=('gene_id', 'transcript_id'), sep='|')).saveas('pc_reference.bed')
-    intersection = orf_bed_positions.intersect(
-        reference_bed, wao=True, s=True).saveas('intersection.bed')
-    summed_overlap = pd.read_table(intersection.fn, 
-                                   names=['chrom', 'start', 'stop', 'name', 'score', 'strand',\
-                                    'chrom_tar', 'start_tar', 'stop_tar', 'name_tar', 'score_tar',\
-                                    'strand_tar', 'overlap'], low_memory=False)
+    if use_fasta == False:
+        reference_bed = BedTool(reference_gtf.to_bed(
+            name=('gene_id', 'transcript_id'), sep='|')).saveas('pc_reference.bed')
+        intersection = orf_bed_positions.intersect(
+            reference_bed, wao=True, s=True).saveas('intersection.bed')
+    else:
+        reference_bed = BedTool(prot_cod_bed)
+        intersection = orf_bed_positions.intersect(
+            reference_bed, wao=True).saveas('intersection.bed')
+        # leave out the strand for now as the coordinates differ (+/- vs /-1)
+    summed_overlap = pd.read_table(intersection.fn,
+                                   names=['chrom', 'start', 'stop', 'name', 'score', 'strand',
+                                          'chrom_tar', 'start_tar', 'stop_tar', 'name_tar', 'score_tar',
+                                          'strand_tar', 'overlap'], low_memory=False)
+    if use_fasta == True:
+        summed_overlap['name_tar'] = summed_overlap['name_tar'] + \
+            '|' + summed_overlap['score_tar']
 
     summed_overlap = summed_overlap.groupby(
         ['name', 'name_tar'])['overlap'].sum()
     summed_overlap = summed_overlap.reset_index()
+
     summed_overlap['tid'] = summed_overlap['name'].str.extract(
-        r'[A-Z0-9\.]*\|([A-Z0-9\.]*):.*')
+        r'[^|]*\|([^:]*):.*')
+
+    # summed_overlap['tid'] = summed_overlap['name'].str.extract(
+    #       r'[A-Z0-9\.]*\|([A-Z0-9\.]*):.*')
 
     print('before any filtering we have', len(
         summed_overlap['tid'].unique()), 'tids')
 
     # get gene ids of source and target, they need to be the same, otherwise the match is invalid
+    # summed_overlap['gid'] = summed_overlap['name'].str.extract(
+    #    r'([A-Z0-9\.]*)\|[A-Z0-9\.]*:.*')
+    # summed_overlap['gid_target'] = summed_overlap['name_tar'].str.extract(
+    #    r'([A-Z0-9\.]*)\|[A-Z0-9\.]*')
     summed_overlap['gid'] = summed_overlap['name'].str.extract(
-        r'([A-Z0-9\.]*)\|[A-Z0-9\.]*:.*')
+        r'([^|]*)\|[^:]*:.*')
     summed_overlap['gid_target'] = summed_overlap['name_tar'].str.extract(
-        r'([A-Z0-9\.]*)\|[A-Z0-9\.]*')
+        r'([^|]*)\|.*')
 
     summed_overlap['ORF_nr'] = summed_overlap['name'].str.split(':').str[1]
     summed_overlap['start_ORF'] = summed_overlap['name'].str.split(':').str[2]
@@ -255,7 +273,7 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
     summed_overlap['end_ORF'] = summed_overlap['end_ORF'].astype(int) - 2
 
     # get length of target transcripts
-    target_length_dict = {}
+    """target_length_dict = {}
     for interval in reference_bed:
         if interval.name in target_length_dict.keys():
             target_length_dict[interval.name] += interval.stop - interval.start
@@ -264,7 +282,7 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
     summed_overlap['target_length'] = summed_overlap['name_tar'].map(
         target_length_dict)
     summed_overlap['target_coverage_percentage'] = summed_overlap['overlap'] / \
-        summed_overlap['target_length']
+        summed_overlap['target_length']"""
 
     ORF_sequences = SeqIO.to_dict(SeqIO.parse(orf_file, "fasta"))
     target_sequences = SeqIO.to_dict(SeqIO.parse(transcript_file, "fasta"))
@@ -274,7 +292,7 @@ def find_cds_orf(reference_gtf, orf_bed_positions, orf_file, transcript_file):
     for row in summed_overlap.itertuples():
         source = summed_overlap['name'].at[row.Index]
         target = summed_overlap['name_tar'].at[row.Index]
-        if target != ".":
+        if target != '.' and target != '.|.':
             source_seq = ORF_sequences[source]
             target_seq = target_sequences[target]
             longest_common_substring = \

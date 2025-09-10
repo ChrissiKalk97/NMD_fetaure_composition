@@ -55,7 +55,10 @@ def get_orfs(seq, id, gene, description, annotations, countOrfs, orf_records):
                     if (len(orf) % 3 == 0) and not ("N" in orf) and (len(orf)/3 >= minOrfLength):
                         ##### added Frame to ID #####
                         header = ''.join([id, ":ORF-", str(countOrfs), ":", str(
+                            # if bed format shoul dbe +3
+                            # but later we take -2 and then the end position is the end of the codons
                             lst1[frame][currentStart]), ":", str(lst2[frame][currentStop]+2)])
+                        # as the last position is left out
                         sequence = seq[lst1[frame][currentStart]:lst2[frame][currentStop]+3]
                         countOrfs = countOrfs + 1
                         orf_records.append(SeqRecord(
@@ -79,6 +82,7 @@ def OrfFinder(transcript_SeqRecords):
         orf_records = get_orfs(transcript.seq.upper(), transcript.id, transcript.name,
                                transcript.description, transcript.annotations, countOrfs, orf_records)
         if countOrfs == 1:
-            f.write(f"Transcript {transcript.id} of gene {transcript.name} did not contain an ORF \n")
+            f.write(
+                f"Transcript {transcript.id} of gene {transcript.name} did not contain an ORF \n")
     f.close()
     return (orf_records)
