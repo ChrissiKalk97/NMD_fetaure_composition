@@ -39,18 +39,24 @@ def get_fasta_tid(transcripts_no_cds, genome_file, seq_type: str, plus_stop=Fals
         # sort list according to start positions of exons
         # if len(transcript_exons) > 0:
         transcript_exons.sort(key=lambda elem: int(elem[0]))
-        print(transcript_exons)
+        # print(transcript_exons)
         for idx, exon in enumerate(transcript_exons):
             if plus_stop == True and idx == len(transcript_exons) - 1:
-                fasta_string += genome_dict[exon[5]
-                                            ].seq[int(exon[0])-1:int(exon[1])+3]
+                if len(exon) > 0:
+                    fasta_string += genome_dict[exon[5]
+                                                ].seq[int(exon[0])-1:int(exon[1])+3]
+                else:
+                    print(idx, exon, transcript_exons)
             else:
                 # build the transcript sequence from the exons in 5' to 3' order (+-strand), exon by exon
                 # get sequence of the exon by
-                fasta_string += genome_dict[exon[5]
-                                            ].seq[int(exon[0])-1:int(exon[1])]
+                if len(exon) > 0:
+                    fasta_string += genome_dict[exon[5]
+                                                ].seq[int(exon[0])-1:int(exon[1])]
                 # -1: 1-based system as in Ensembl, but string indexing is 0-based
                 # might need to provide this to be changed, if assemblies have used different annotations, e.g. NCBI
+                else:
+                    print(idx, exon, transcript_exons)
 
             # subsetting the chromosome at the respecitve start and stop positions
             # add exon number and genomic start end to the description
