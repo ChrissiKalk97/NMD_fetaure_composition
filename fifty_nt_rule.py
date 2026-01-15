@@ -101,6 +101,7 @@ def main():
     CDS_seqs = []
     transcript_seqs = []
     if len(tids_with_cds_set) > 0:
+        print('TIDs with CDS set evaluated as length > 0', len(tids_with_cds_set))
         transcripts_with_cds = {k: transcript_gtftk_object[k] for k in transcript_gtftk_object.keys()
                                 if k in tids_with_cds_set}
         transcript_seqs = get_fasta_tid(
