@@ -97,11 +97,9 @@ def main():
     transcript_ids_wo_cds_set = set(transcript_ids_wo_cds)
     tids_with_cds_set = set(
         tid for tid in transcript_ids if tid not in transcript_ids_wo_cds_set)
-    print('TIDs with CDS', tids_with_cds_set)
     CDS_seqs = []
     transcript_seqs = []
     if len(tids_with_cds_set) > 0:
-        print('TIDs with CDS set evaluated as length > 0', len(tids_with_cds_set))
         transcripts_with_cds = {k: transcript_gtftk_object[k] for k in transcript_gtftk_object.keys()
                                 if k in tids_with_cds_set}
         transcript_seqs = get_fasta_tid(
@@ -116,8 +114,6 @@ def main():
     ### handle transcripts with no CDS annoation: CDS determintation, then 50 nt rule#
     #################################################################################
     if len(transcript_ids_wo_cds) > 0:
-        print('transcripts for which no CDS annotation was given in the custom gtf: ',
-              len(transcript_ids_wo_cds))
 
         # determine CDS for source transcripts
         transcripts_calculated_CDS, sequences = determine_cds(transcript_gtftk_object, transcript_ids_wo_cds,

@@ -39,42 +39,37 @@ def get_fasta_tid(transcripts_no_cds, genome_file, seq_type: str, plus_stop=Fals
         # sort list according to start positions of exons
         if len(transcript_exons) > 0:
             transcript_exons.sort(key=lambda elem: int(elem[0]))
-        else:
-            print(transcript_exons)
-            print(transcript_info)
-            print(seq_type)
-            print([sub_list for sub_list in transcript_info if 'exon' in sub_list])
-            print([sub_list for sub_list in transcript_info])
-        for idx, exon in enumerate(transcript_exons):
-            if plus_stop == True and idx == len(transcript_exons) - 1:
-                if len(exon) > 0:
-                    fasta_string += genome_dict[exon[5]
-                                                ].seq[int(exon[0])-1:int(exon[1])+3]
-                else:
-                    print(idx, exon, transcript_exons)
-            else:
-                # build the transcript sequence from the exons in 5' to 3' order (+-strand), exon by exon
-                # get sequence of the exon by
-                if len(exon) > 0:
-                    fasta_string += genome_dict[exon[5]
-                                                ].seq[int(exon[0])-1:int(exon[1])]
-                # -1: 1-based system as in Ensembl, but string indexing is 0-based
-                # might need to provide this to be changed, if assemblies have used different annotations, e.g. NCBI
-                else:
-                    print(idx, exon, transcript_exons)
 
-            # subsetting the chromosome at the respecitve start and stop positions
-            # add exon number and genomic start end to the description
-            description += 'exon' + exon[2] + \
-                '-' + exon[0] + '-' + exon[1] + ':'
-        # add chromosome and strand in front of description, remove the last ':'
-        description = 'chrom' + exon[5] + ':' + \
-            'strand' + exon[4] + ':' + description[:-1]
-        if exon[4] == '-':
-            fasta_string = Seq(fasta_string).reverse_complement()
-        sequences.append(SeqRecord(id=transcript_id, seq=Seq(fasta_string), name=exon[6],
-                                   # name is gene
-                                   description=description, annotations={'score': exon[7]}))
+            for idx, exon in enumerate(transcript_exons):
+                if plus_stop == True and idx == len(transcript_exons) - 1:
+                    if len(exon) > 0:
+                        fasta_string += genome_dict[exon[5]
+                                                    ].seq[int(exon[0])-1:int(exon[1])+3]
+                    else:
+                        print(idx, exon, transcript_exons)
+                else:
+                    # build the transcript sequence from the exons in 5' to 3' order (+-strand), exon by exon
+                    # get sequence of the exon by
+                    if len(exon) > 0:
+                        fasta_string += genome_dict[exon[5]
+                                                    ].seq[int(exon[0])-1:int(exon[1])]
+                    # -1: 1-based system as in Ensembl, but string indexing is 0-based
+                    # might need to provide this to be changed, if assemblies have used different annotations, e.g. NCBI
+                    else:
+                        print(idx, exon, transcript_exons)
+
+                # subsetting the chromosome at the respecitve start and stop positions
+                # add exon number and genomic start end to the description
+                description += 'exon' + exon[2] + \
+                    '-' + exon[0] + '-' + exon[1] + ':'
+            # add chromosome and strand in front of description, remove the last ':'
+            description = 'chrom' + exon[5] + ':' + \
+                'strand' + exon[4] + ':' + description[:-1]
+            if exon[4] == '-':
+                fasta_string = Seq(fasta_string).reverse_complement()
+            sequences.append(SeqRecord(id=transcript_id, seq=Seq(fasta_string), name=exon[6],
+                                       # name is gene
+                                       description=description, annotations={'score': exon[7]}))
     del genome_dict
     return sequences
 
