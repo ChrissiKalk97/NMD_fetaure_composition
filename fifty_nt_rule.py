@@ -97,6 +97,7 @@ def main():
     transcript_ids_wo_cds_set = set(transcript_ids_wo_cds)
     tids_with_cds_set = set(
         tid for tid in transcript_ids if tid not in transcript_ids_wo_cds_set)
+    print('TIDs with CDS', tids_with_cds_set)
     CDS_seqs = []
     transcript_seqs = []
     if len(tids_with_cds_set) > 0:
