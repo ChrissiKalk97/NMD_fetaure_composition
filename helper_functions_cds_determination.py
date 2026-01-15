@@ -37,9 +37,11 @@ def get_fasta_tid(transcripts_no_cds, genome_file, seq_type: str, plus_stop=Fals
         transcript_exons = [
             sub_list for sub_list in transcript_info if seq_type in sub_list]
         # sort list according to start positions of exons
-        # if len(transcript_exons) > 0:
-        transcript_exons.sort(key=lambda elem: int(elem[0]))
-        # print(transcript_exons)
+        if len(transcript_exons) > 0:
+            transcript_exons.sort(key=lambda elem: int(elem[0]))
+        else:
+            print(transcript_exons)
+            print(transcript_info)
         for idx, exon in enumerate(transcript_exons):
             if plus_stop == True and idx == len(transcript_exons) - 1:
                 if len(exon) > 0:
